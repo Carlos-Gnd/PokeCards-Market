@@ -1,0 +1,203 @@
+/* ============================================================
+   Booster Pack — flip 3D + holográfico prismático
+   ============================================================ */
+
+.bp-perspective {
+  perspective: 1400px;
+}
+
+.bp-flip-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 245 / 342;
+  transform-style: preserve-3d;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  will-change: transform;
+}
+
+.bp-flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.bp-flip-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  box-shadow: 0 14px 40px -16px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.bp-flip-back {
+  transform: rotateY(180deg);
+  background: #0B1020;
+}
+
+.bp-card-back {
+  position: absolute;
+  inset: 0;
+  background-image: url('/img/card-back.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.bp-card-back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.18), transparent 65%);
+  pointer-events: none;
+}
+
+.bp-card-front-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ----- Holográfico (solo cartas raras al hover) ----- */
+.bp-holo {
+  position: relative;
+  isolation: isolate;
+}
+
+.bp-holo::before,
+.bp-holo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.bp-holo::before {
+  background: linear-gradient(
+    115deg,
+    transparent 20%,
+    rgba(255, 0, 153, 0.45) 35%,
+    rgba(53, 200, 255, 0.55) 50%,
+    rgba(246, 196, 83, 0.5) 65%,
+    transparent 80%
+  );
+  background-size: 250% 250%;
+  mix-blend-mode: color-dodge;
+  filter: saturate(1.4) brightness(1.05);
+  animation: bp-holo-shift 4s linear infinite;
+  animation-play-state: paused;
+}
+
+.bp-holo::after {
+  background:
+    repeating-linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.0) 0px,
+      rgba(255, 255, 255, 0.18) 2px,
+      rgba(255, 255, 255, 0.0) 4px,
+      rgba(255, 255, 255, 0.0) 8px
+    ),
+    radial-gradient(
+      circle at var(--bp-mx, 50%) var(--bp-my, 50%),
+      rgba(255, 255, 255, 0.55),
+      transparent 45%
+    );
+  mix-blend-mode: overlay;
+  animation: bp-holo-sweep 6s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+.bp-holo:hover::before,
+.bp-holo:hover::after {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+.bp-holo:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow:
+    0 22px 50px -16px rgba(109, 94, 248, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 30px rgba(53, 200, 255, 0.35);
+}
+
+@keyframes bp-holo-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes bp-holo-sweep {
+  0%, 100% { transform: translateX(-30%) skewX(-12deg); }
+  50%      { transform: translateX(30%) skewX(-12deg); }
+}
+
+/* Halo dorado para Special Illustration / Hyper Rare */
+.bp-holo-legendary::before {
+  background: linear-gradient(
+    115deg,
+    transparent 15%,
+    rgba(246, 196, 83, 0.55) 35%,
+    rgba(255, 111, 181, 0.55) 50%,
+    rgba(53, 200, 255, 0.55) 65%,
+    transparent 85%
+  );
+}
+
+.bp-holo-legendary:hover {
+  box-shadow:
+    0 22px 60px -16px rgba(246, 196, 83, 0.65),
+    0 0 0 1px rgba(246, 196, 83, 0.35),
+    0 0 36px rgba(255, 111, 181, 0.45);
+}
+
+/* ----- Sobre cerrado (Prismatic Evolutions) ----- */
+.bp-pack-shell {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 500 / 750;
+  border-radius: 14px;
+  cursor: pointer;
+  background-image: url('/img/booster-pack.webp');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 24px 50px rgba(109, 94, 248, 0.55));
+  overflow: visible;
+  isolation: isolate;
+}
+
+.bp-pack-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.32) 48%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.32) 52%,
+    transparent 62%
+  );
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  animation: bp-pack-shimmer 3.4s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+@keyframes bp-pack-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ----- Skeleton fallback ----- */
+.bp-card-skeleton {
+  background: linear-gradient(135deg, #141B34 0%, #1B2547 50%, #141B34 100%);
+  background-size: 200% 100%;
+  animation: bp-pack-shimmer 1.6s ease-in-out infinite;
+}
