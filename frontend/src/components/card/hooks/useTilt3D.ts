@@ -4,8 +4,6 @@ import { useMotionValue, useSpring, useTransform, type MotionValue } from 'frame
 interface TiltOptions {
   /** Máximo grados de rotación. */
   maxTilt?: number;
-  /** Intensidad del shine que sigue al cursor. */
-  shineOpacity?: number;
   /** Si se desactiva en mobile. */
   disableOnTouch?: boolean;
   /** Multiplicador de la pendiente para sentirse más cinematográfico. */
@@ -17,9 +15,6 @@ interface TiltOptions {
 export interface TiltMotionValues {
   rotateX: MotionValue<number>;
   rotateY: MotionValue<number>;
-  shineX: MotionValue<string>;
-  shineY: MotionValue<string>;
-  shineOpacity: MotionValue<number>;
   glowOpacity: MotionValue<number>;
   parallaxX: MotionValue<number>;
   parallaxY: MotionValue<number>;
@@ -33,7 +28,6 @@ export interface TiltMotionValues {
 export function useTilt3D(options: TiltOptions = {}) {
   const {
     maxTilt = 12,
-    shineOpacity = 0.55,
     disableOnTouch = true,
     intensity = 1,
     disabled = false,
@@ -52,10 +46,6 @@ export function useTilt3D(options: TiltOptions = {}) {
   const rotateX = useTransform(y, [-0.5, 0.5], [maxTilt * intensity, -maxTilt * intensity]);
   const rotateY = useTransform(x, [-0.5, 0.5], [-maxTilt * intensity, maxTilt * intensity]);
 
-  const shineXp = useTransform(x, [-0.5, 0.5], ['10%', '90%']);
-  const shineYp = useTransform(y, [-0.5, 0.5], ['10%', '90%']);
-
-  const shineO = useMotionValue(0);
   const glowO = useMotionValue(0);
 
   const parallaxX = useTransform(x, [-0.5, 0.5], [-8, 8]);
@@ -69,16 +59,14 @@ export function useTilt3D(options: TiltOptions = {}) {
     const py = (e.clientY - rect.top) / rect.height - 0.5;
     rawX.set(px);
     rawY.set(py);
-    shineO.set(shineOpacity);
-    glowO.set(1);
-  }, [rawX, rawY, shineO, glowO, shineOpacity]);
+    //glowO.set(1);
+  }, [rawX, rawY, glowO]);
 
   const handleLeave = useCallback(() => {
     rawX.set(0);
     rawY.set(0);
-    shineO.set(0);
     glowO.set(0);
-  }, [rawX, rawY, shineO, glowO]);
+  }, [rawX, rawY, glowO]);
 
   useEffect(() => {
     if (disabled) return;
@@ -102,9 +90,6 @@ export function useTilt3D(options: TiltOptions = {}) {
     motion: {
       rotateX,
       rotateY,
-      shineX: shineXp,
-      shineY: shineYp,
-      shineOpacity: shineO,
       glowOpacity: glowO,
       parallaxX,
       parallaxY,

@@ -71,7 +71,7 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
             transition={{ type: 'spring', stiffness: 180, damping: 16 }}
             className="relative w-full max-w-[380px]"
           >
-            <Card card={card} size="xl" enableTilt shineMode="static" />
+            <Card card={card} size="xl" enableTilt />
           </motion.div>
         </div>
 

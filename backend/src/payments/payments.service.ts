@@ -45,9 +45,8 @@ export class PaymentsService {
         `ARCADIUM · ${card.name} (${card.rarity}/${card.variant})`,
       );
     } catch (err: unknown) {
-      this.logger.error(
-        `PayPal create-order falló: ${err instanceof Error ? err.message : err}`,
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`PayPal create-order falló: ${message}`);
       throw new BadRequestException('No se pudo crear la orden de PayPal');
     }
 
@@ -127,9 +126,8 @@ export class PaymentsService {
       captureStatus = result.status;
       capturedAmount = result.capturedAmount;
     } catch (err: unknown) {
-      this.logger.error(
-        `PayPal capture-order falló: ${err instanceof Error ? err.message : err}`,
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`PayPal capture-order falló: ${message}`);
       await this.prisma.order.update({
         where: { paypalOrderId },
         data: { status: 'FAILED' },
@@ -153,7 +151,7 @@ export class PaymentsService {
       Math.abs(capturedAmount - Number(order.amount)) > 0.01
     ) {
       this.logger.warn(
-        `Monto capturado (${capturedAmount}) ≠ orden (${order.amount}) para ${paypalOrderId}`,
+        `Monto capturado (${capturedAmount}) ≠ orden (${Number(order.amount)}) para ${paypalOrderId}`,
       );
       throw new BadRequestException(
         'El monto capturado no coincide con la orden',

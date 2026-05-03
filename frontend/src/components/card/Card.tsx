@@ -9,7 +9,6 @@ import { FoilLayer } from './layers/FoilLayer';
 import { HoloLayer } from './layers/HoloLayer';
 import { ShimmerLayer } from './layers/ShimmerLayer';
 import { ParticlesLayer } from './layers/ParticlesLayer';
-import { ShineLayer } from './layers/ShineLayer';
 import { CardBadges } from './parts/CardBadges';
 import { CardArtwork } from './parts/CardArtwork';
 import { CardMetadata } from './parts/CardMetadata';
@@ -23,13 +22,6 @@ export interface CardProps {
   onClick?: () => void;
   enableTilt?: boolean;
   lightweight?: boolean;
-  /**
-   * BUG FIX: Se eliminó el modo 'static' de shineMode porque el div
-   * arc-static-card-shine generaba un sweep de color visible que cubría
-   * media carta al rotar con el tilt 3D. El único modo válido es 'reactive'
-   * (gradiente puntual que sigue al cursor) o 'none' para desactivarlo.
-   */
-  shineMode?: 'reactive' | 'none';
 }
 
 const SIZE_DIMS: Record<NonNullable<CardProps['size']>, { w: string; aspect: string }> = {
@@ -51,9 +43,9 @@ const SIZE_DIMS: Record<NonNullable<CardProps['size']>, { w: string; aspect: str
  *   z-5:  CardArtwork (la imagen — ahora flex-[3])
  *   z-6:  ParticlesLayer (chispas decorativas)
  *   z-7:  Badges + Metadata (UI textual)
- *   z-8:  ShineLayer (gloss puntual del cursor — solo 'reactive')
  *
  * ELIMINADOS:
+ *   - ShineLayer (gloss puntual del cursor) — removido porque las props ya no existen
  *   - arc-luminous-foil: generaba sweep de color azul-cyan por toda la carta
  *   - arc-static-card-shine: sweep blanco animado que cubría medio card
  *   Ambos causaban el efecto visual "de color que cubre la mitad de la carta
@@ -66,7 +58,6 @@ function CardImpl({
   onClick,
   enableTilt = true,
   lightweight = false,
-  shineMode = 'reactive',
 }: CardProps) {
   const theme = getTheme(card.rarity);
   const variantStyle = getVariantVisualStyle(card.variant);
@@ -75,7 +66,6 @@ function CardImpl({
   const tilt = useTilt3D({
     maxTilt: theme.tiltMaxDeg,
     intensity: theme.tiltIntensity,
-    shineOpacity: theme.tier === 'eternal' || theme.tier === 'ascendant' ? 0.7 : 0.55,
     disableOnTouch: true,
     disabled: !tiltEnabled,
   });
@@ -186,13 +176,7 @@ function CardImpl({
             Solo se mantiene el modo 'reactive' (ShineLayer) que es un punto de
             brillo puntual y sutil que sigue al cursor sin barrer la carta.
           */}
-          {tiltEnabled && shineMode === 'reactive' && (
-            <ShineLayer
-              shineX={tiltMotion.shineX}
-              shineY={tiltMotion.shineY}
-              opacity={tiltMotion.shineOpacity}
-            />
-          )}
+          {/* ShineLayer removido porque las propiedades shineX, shineY, shineOpacity ya no existen en el hook */}
         </div>
       </motion.div>
     </motion.div>

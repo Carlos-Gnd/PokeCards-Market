@@ -39,7 +39,8 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             orderCreated = await this.paypal.createOrder(Number(amount), `arcadium_${card.pokemonId}`, `ARCADIUM · ${card.name} (${card.rarity}/${card.variant})`);
         }
         catch (err) {
-            this.logger.error(`PayPal create-order falló: ${err instanceof Error ? err.message : err}`);
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.error(`PayPal create-order falló: ${message}`);
             throw new common_1.BadRequestException('No se pudo crear la orden de PayPal');
         }
         await this.prisma.order.create({
@@ -111,7 +112,8 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             capturedAmount = result.capturedAmount;
         }
         catch (err) {
-            this.logger.error(`PayPal capture-order falló: ${err instanceof Error ? err.message : err}`);
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.error(`PayPal capture-order falló: ${message}`);
             await this.prisma.order.update({
                 where: { paypalOrderId },
                 data: { status: 'FAILED' },
@@ -127,7 +129,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         }
         if (capturedAmount !== null &&
             Math.abs(capturedAmount - Number(order.amount)) > 0.01) {
-            this.logger.warn(`Monto capturado (${capturedAmount}) ≠ orden (${order.amount}) para ${paypalOrderId}`);
+            this.logger.warn(`Monto capturado (${capturedAmount}) ≠ orden (${Number(order.amount)}) para ${paypalOrderId}`);
             throw new common_1.BadRequestException('El monto capturado no coincide con la orden');
         }
         const result = await this.prisma.$transaction(async (tx) => {
