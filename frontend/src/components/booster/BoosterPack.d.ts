@@ -1,5 +1,8 @@
+import type { ReactElement } from 'react';
+
 interface BoosterPackProps {
   userId?: string | null;
 }
-declare const BoosterPack: (props?: BoosterPackProps) => JSX.Element;
+
+declare const BoosterPack: (props?: BoosterPackProps) => ReactElement;
 export default BoosterPack;

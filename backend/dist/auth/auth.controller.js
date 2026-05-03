@@ -68,7 +68,10 @@ let AuthController = AuthController_1 = class AuthController {
         });
         if (!res.ok) {
             const body = (await res.json().catch(() => ({})));
-            const msg = body?.msg || body?.message || body?.error_description || 'No se pudo crear la cuenta';
+            const msg = body.msg ??
+                body.message ??
+                body.error_description ??
+                'No se pudo crear la cuenta';
             this.logger.warn(`Registro falló para ${dto.email}: ${msg}`);
             throw new common_1.BadRequestException(msg);
         }

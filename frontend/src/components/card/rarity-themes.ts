@@ -1,7 +1,12 @@
 /**
- * Temas visuales por rareza ARCADIUM.
- * Cada rareza tiene una identidad radicalmente distinta:
- * desde minimalista (CORE) hasta hiper-premium (ETERNAL).
+ * PokéCards Market — Temas visuales por rareza
+ *
+ * Nueva paleta basada en el diseño de marca:
+ *   Primary:   Azul eléctrico  #3B82F6
+ *   Secondary: Morado neón     #8B5CF6
+ *   Accent:    Cian brillante  #22D3EE
+ *   Gold:      Ámbar           #F59E0B
+ *   Eternal:   Rosa neón       #EC4899
  */
 
 import type { RarityTier } from '../../lib/rarity';
@@ -9,166 +14,155 @@ import type { RarityTier } from '../../lib/rarity';
 export interface RarityTheme {
   tier: RarityTier;
   label: string;
-  /** Borde principal del frame (CSS gradient o color). */
   frameBorder: string;
-  /** Fondo principal del card. */
   frameBg: string;
-  /** Color de texto del nombre. */
   nameColor: string;
-  /** Sombra base del card. */
   cardShadow: string;
-  /** Sombra de glow ambient. */
   glowShadow: string;
-  /** Texto pequeño / metadata. */
   metaColor: string;
-  /** Color del HP. */
   accentColor: string;
-
-  /** Capas activas para esta rareza. */
   layers: {
-    /** Holo: textura holográfica iridiscente. */
     holo?: 'subtle' | 'partial' | 'full' | 'rainbow';
-    /** Foil: foil multicolor moviéndose. */
     foil?: 'metallic' | 'rainbow' | 'prismatic';
-    /** Particles: chispas decorativas. */
     particles?: 'sparse' | 'medium' | 'dense' | 'ring';
-    /** Glow constante (no solo en hover). */
     ambientGlow?: boolean;
-    /** Rays: rayos detrás del artwork. */
     rays?: boolean;
-    /** Breathing aura (animación de respirar). */
     breathing?: boolean;
-    /** Slab/encapsulation visual (PSA-style). */
     slab?: boolean;
-    /** Shimmer estático (sweep horizontal). */
     shimmer?: 'slow' | 'constant';
   };
-  /** Tilt máximo en grados. */
   tiltMaxDeg: number;
-  /** Intensidad multiplicador del tilt. */
   tiltIntensity: number;
-  /** Hover lift en px. */
   hoverLift: number;
+  luminousOverlay?: string;
 }
 
 export const RARITY_THEMES: Record<RarityTier, RarityTheme> = {
-  // 1. CORE — minimalista, gris oscuro, sin glow
+
+  // 1. CORE — gris frío, minimalista
   core: {
     tier: 'core',
     label: 'Core',
-    frameBorder: 'linear-gradient(135deg, #2a3144 0%, #1f2538 100%)',
-    frameBg: 'linear-gradient(180deg, #1A2138 0%, #141B34 100%)',
-    nameColor: '#E5E7EB',
-    cardShadow: '0 8px 24px -10px rgba(0,0,0,0.5)',
+    frameBorder: 'linear-gradient(135deg, #2A3550 0%, #1E293B 100%)',
+    frameBg: 'linear-gradient(180deg, #1A2035 0%, #131929 100%)',
+    nameColor: '#E2E8F0',
+    cardShadow: '0 8px 24px -10px rgba(0,0,0,0.55)',
     glowShadow: '0 0 0 transparent',
     metaColor: '#94A3B8',
     accentColor: '#94A3B8',
     layers: {},
-    tiltMaxDeg: 6,
-    tiltIntensity: 0.6,
+    tiltMaxDeg: 5,
+    tiltIntensity: 0.55,
     hoverLift: 4,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(148,163,184,0.14) 0%, transparent 60%)',
   },
 
-  // 2. ALLOY — cian metálico, ligero brillo
+  // 2. ALLOY — cian eléctrico
   alloy: {
     tier: 'alloy',
     label: 'Alloy',
-    frameBorder: 'linear-gradient(135deg, #67E8F9 0%, #5EEAD4 100%)',
-    frameBg: 'linear-gradient(180deg, #112E2C 0%, #0F2530 100%)',
-    nameColor: '#A7F3D0',
-    cardShadow: '0 10px 28px -10px rgba(103,232,249,0.3)',
-    glowShadow: '0 0 24px rgba(103,232,249,0.35)',
+    frameBorder: 'linear-gradient(135deg, #22D3EE 0%, #06B6D4 100%)',
+    frameBg: 'linear-gradient(180deg, #0E2A30 0%, #0A1F26 100%)',
+    nameColor: '#A5F3FC',
+    cardShadow: '0 10px 28px -10px rgba(34,211,238,0.30)',
+    glowShadow: '0 0 22px rgba(34,211,238,0.38)',
     metaColor: '#67E8F9',
-    accentColor: '#67E8F9',
+    accentColor: '#22D3EE',
     layers: { shimmer: 'slow', ambientGlow: true },
     tiltMaxDeg: 8,
-    tiltIntensity: 0.8,
+    tiltIntensity: 0.75,
     hoverLift: 6,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(34,211,238,0.18) 0%, transparent 65%)',
   },
 
-  // 3. PRIME — azul premium, brillo radial interno
+  // 3. PRIME — azul eléctrico
   prime: {
     tier: 'prime',
     label: 'Prime',
-    frameBorder: 'linear-gradient(135deg, #35C8FF 0%, #6DDBFF 50%, #35C8FF 100%)',
-    frameBg: 'radial-gradient(circle at 50% 30%, #0B2E4D 0%, #0B1B36 70%)',
-    nameColor: '#BAE6FD',
-    cardShadow: '0 14px 36px -12px rgba(53,200,255,0.45)',
-    glowShadow: '0 0 32px rgba(53,200,255,0.5)',
-    metaColor: '#7DD3FC',
-    accentColor: '#35C8FF',
+    frameBorder: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 50%, #3B82F6 100%)',
+    frameBg: 'radial-gradient(circle at 50% 30%, #0E2545 0%, #091530 70%)',
+    nameColor: '#BFDBFE',
+    cardShadow: '0 14px 36px -12px rgba(59,130,246,0.45)',
+    glowShadow: '0 0 32px rgba(59,130,246,0.50)',
+    metaColor: '#93C5FD',
+    accentColor: '#3B82F6',
     layers: { shimmer: 'slow', ambientGlow: true, holo: 'subtle' },
     tiltMaxDeg: 10,
-    tiltIntensity: 0.9,
+    tiltIntensity: 0.88,
     hoverLift: 8,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(59,130,246,0.22) 0%, transparent 65%)',
   },
 
-  // 4. ELITE — púrpura premium, holo parcial, glow pulsante
+  // 4. ELITE — morado neón
   elite: {
     tier: 'elite',
     label: 'Elite',
-    frameBorder: 'linear-gradient(135deg, #A78BFA 0%, #6D5EF8 50%, #A78BFA 100%)',
-    frameBg: 'radial-gradient(circle at 50% 30%, #2D1B5C 0%, #1A1342 70%)',
+    frameBorder: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #8B5CF6 100%)',
+    frameBg: 'radial-gradient(circle at 50% 30%, #2E1B52 0%, #190F38 70%)',
     nameColor: '#DDD6FE',
-    cardShadow: '0 18px 44px -14px rgba(167,139,250,0.55)',
-    glowShadow: '0 0 38px rgba(167,139,250,0.55)',
+    cardShadow: '0 18px 44px -14px rgba(139,92,246,0.55)',
+    glowShadow: '0 0 36px rgba(139,92,246,0.55)',
     metaColor: '#C4B5FD',
-    accentColor: '#A78BFA',
+    accentColor: '#8B5CF6',
     layers: { holo: 'partial', shimmer: 'slow', ambientGlow: true, breathing: true },
-    tiltMaxDeg: 14,
-    tiltIntensity: 1,
+    tiltMaxDeg: 13,
+    tiltIntensity: 1.0,
     hoverLift: 10,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(139,92,246,0.25) 0%, transparent 65%)',
   },
 
-  // 5. APEX — dorado, rayos detrás, aura
+  // 5. APEX — dorado ámbar
   apex: {
     tier: 'apex',
     label: 'Apex',
-    frameBorder: 'linear-gradient(135deg, #F6C453 0%, #FFD876 30%, #F6C453 60%, #B8860B 100%)',
-    frameBg: 'radial-gradient(circle at 50% 25%, #3A2510 0%, #1A1107 70%)',
-    nameColor: '#FFD876',
-    cardShadow: '0 22px 50px -16px rgba(246,196,83,0.6)',
-    glowShadow: '0 0 44px rgba(246,196,83,0.65)',
+    frameBorder: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 35%, #F59E0B 65%, #D97706 100%)',
+    frameBg: 'radial-gradient(circle at 50% 25%, #3A2508 0%, #1A1005 70%)',
+    nameColor: '#FDE68A',
+    cardShadow: '0 22px 50px -16px rgba(245,158,11,0.60)',
+    glowShadow: '0 0 44px rgba(245,158,11,0.65)',
     metaColor: '#FCD34D',
-    accentColor: '#F6C453',
+    accentColor: '#F59E0B',
     layers: { rays: true, particles: 'sparse', shimmer: 'constant', ambientGlow: true, breathing: true, holo: 'partial' },
-    tiltMaxDeg: 16,
+    tiltMaxDeg: 15,
     tiltIntensity: 1.1,
-    hoverLift: 14,
+    hoverLift: 13,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(245,158,11,0.28) 0%, transparent 65%)',
   },
 
-  // 6. ASCENDANT — blanco + cyan + gold mix, holo full surface
+  // 6. ASCENDANT — blanco cristal + azul + cian
   ascendant: {
     tier: 'ascendant',
     label: 'Ascendant',
-    frameBorder: 'linear-gradient(135deg, #ffffff 0%, #35C8FF 30%, #F6C453 60%, #ffffff 100%)',
-    frameBg: 'radial-gradient(circle at 50% 25%, #1B2547 0%, #0B1020 70%)',
-    nameColor: '#ffffff',
-    cardShadow: '0 26px 58px -18px rgba(53,200,255,0.55)',
-    glowShadow: '0 0 52px rgba(53,200,255,0.6)',
+    frameBorder: 'linear-gradient(135deg, #F8FAFC 0%, #3B82F6 30%, #22D3EE 60%, #F8FAFC 100%)',
+    frameBg: 'radial-gradient(circle at 50% 25%, #1A2845 0%, #0B1020 70%)',
+    nameColor: '#FFFFFF',
+    cardShadow: '0 26px 58px -18px rgba(59,130,246,0.55)',
+    glowShadow: '0 0 52px rgba(34,211,238,0.60)',
     metaColor: '#E0F2FE',
-    accentColor: '#35C8FF',
+    accentColor: '#22D3EE',
     layers: { holo: 'full', foil: 'rainbow', particles: 'medium', ambientGlow: true, breathing: true, rays: true },
     tiltMaxDeg: 18,
     tiltIntensity: 1.2,
     hoverLift: 16,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(248,250,252,0.18) 0%, rgba(34,211,238,0.12) 45%, transparent 70%)',
   },
 
-  // 7. ETERNAL — obsidiana + oro + prismático
+  // 7. ETERNAL — rosa neón + azul + morado
   eternal: {
     tier: 'eternal',
     label: 'Eternal',
-    frameBorder: 'linear-gradient(135deg, #FF6FB5 0%, #6D5EF8 25%, #35C8FF 50%, #F6C453 75%, #FF6FB5 100%)',
-    frameBg: 'radial-gradient(circle at 50% 25%, #1a0a2e 0%, #050510 80%)',
-    nameColor: '#FF6FB5',
-    cardShadow: '0 32px 70px -20px rgba(255,111,181,0.7)',
-    glowShadow: '0 0 64px rgba(255,111,181,0.75)',
-    metaColor: '#FBCFE8',
-    accentColor: '#FF6FB5',
+    frameBorder: 'linear-gradient(135deg, #EC4899 0%, #8B5CF6 25%, #3B82F6 50%, #22D3EE 75%, #EC4899 100%)',
+    frameBg: 'radial-gradient(circle at 50% 25%, #250A1E 0%, #06050F 80%)',
+    nameColor: '#FBCFE8',
+    cardShadow: '0 32px 70px -20px rgba(236,72,153,0.70)',
+    glowShadow: '0 0 64px rgba(236,72,153,0.75)',
+    metaColor: '#F9A8D4',
+    accentColor: '#EC4899',
     layers: { holo: 'rainbow', foil: 'prismatic', particles: 'ring', ambientGlow: true, breathing: true, rays: true, shimmer: 'constant' },
     tiltMaxDeg: 20,
     tiltIntensity: 1.4,
     hoverLift: 20,
+    luminousOverlay: 'radial-gradient(circle at 50% 0%, rgba(236,72,153,0.28) 0%, rgba(139,92,246,0.15) 45%, transparent 70%)',
   },
 };
 

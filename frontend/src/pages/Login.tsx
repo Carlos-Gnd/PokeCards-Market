@@ -1,3 +1,20 @@
+import { useState, type FormEvent } from 'react';
+import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
+import { useAuthStore } from '../store/authStore';
+
+interface LocationState {
+  from?: string;
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export function LoginPage() {
   const { user, loading: authLoading, signIn } = useAuthStore();
   const navigate = useNavigate();

@@ -1,11 +1,19 @@
-// ─── Register.tsx ─────────────────────────────────────────────────────────────
-// (Separar en su propio archivo en el proyecto real)
-// Exportamos también Register desde aquí para que sea fácil de copiar
- 
+import { useState, type FormEvent } from 'react';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
+import { useAuthStore } from '../store/authStore';
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export function RegisterPage() {
-  const { user } = useAuthStore();
+  const { user, signUp } = useAuthStore();
   const navigate = useNavigate();
-  const { signUp } = useAuthStore();
   const [username, setUsername] = useState('');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');

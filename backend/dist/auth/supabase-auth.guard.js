@@ -67,7 +67,9 @@ let SupabaseAuthGuard = SupabaseAuthGuard_1 = class SupabaseAuthGuard {
         try {
             let payload;
             if (secret) {
-                payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
+                payload = jwt.verify(token, secret, {
+                    algorithms: ['HS256'],
+                });
             }
             else {
                 const decoded = jwt.decode(token);

@@ -171,7 +171,7 @@ export class BoosterService {
 
     if (rareRows.length === 0) {
       throw new InternalServerErrorException(
-        'No hay cartas raras disponibles. Ejecuta el seed: cd express-api && node seed.js',
+        'No hay cartas raras disponibles. Ejecuta el seed: node seed.js',
       );
     }
     const rareRow = rareRows[0];

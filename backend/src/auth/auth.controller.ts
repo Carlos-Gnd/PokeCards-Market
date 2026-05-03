@@ -22,6 +22,13 @@ class RegisterDto {
   username!: string;
 }
 
+/** Shape de error que devuelve la API admin de GoTrue (Supabase Auth). */
+interface GoTrueErrorBody {
+  msg?: string;
+  message?: string;
+  error_description?: string;
+}
+
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -58,8 +65,12 @@ export class AuthController {
     });
 
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as any;
-      const msg = body?.msg || body?.message || body?.error_description || 'No se pudo crear la cuenta';
+      const body = (await res.json().catch(() => ({}))) as GoTrueErrorBody;
+      const msg =
+        body.msg ??
+        body.message ??
+        body.error_description ??
+        'No se pudo crear la cuenta';
       this.logger.warn(`Registro falló para ${dto.email}: ${msg}`);
       throw new BadRequestException(msg);
     }

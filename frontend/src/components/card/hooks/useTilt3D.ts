@@ -51,6 +51,7 @@ export function useTilt3D(options: TiltOptions = {}) {
   const parallaxX = useTransform(x, [-0.5, 0.5], [-8, 8]);
   const parallaxY = useTransform(y, [-0.5, 0.5], [-8, 8]);
 
+  // glowO eliminado de las deps: no se usa dentro del callback (estaba comentado)
   const handleMove = useCallback((e: PointerEvent) => {
     const el = ref.current;
     if (!el) return;
@@ -59,8 +60,7 @@ export function useTilt3D(options: TiltOptions = {}) {
     const py = (e.clientY - rect.top) / rect.height - 0.5;
     rawX.set(px);
     rawY.set(py);
-    //glowO.set(1);
-  }, [rawX, rawY, glowO]);
+  }, [rawX, rawY]);
 
   const handleLeave = useCallback(() => {
     rawX.set(0);
@@ -83,16 +83,10 @@ export function useTilt3D(options: TiltOptions = {}) {
       el.removeEventListener('pointermove', handleMove);
       el.removeEventListener('pointerleave', handleLeave);
     };
-  }, [handleMove, handleLeave, disableOnTouch, disabled]);
+  }, [disabled, disableOnTouch, handleMove, handleLeave]);
 
   return {
     ref,
-    motion: {
-      rotateX,
-      rotateY,
-      glowOpacity: glowO,
-      parallaxX,
-      parallaxY,
-    } as TiltMotionValues,
+    motion: { rotateX, rotateY, glowOpacity: glowO, parallaxX, parallaxY },
   };
 }
