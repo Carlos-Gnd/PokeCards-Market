@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Fondo oscuro del ícono -->
+    <linearGradient id="pcm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#0B0F19"/>
+    </linearGradient>
+    <!-- Gradiente de la carta principal -->
+    <linearGradient id="pcm-card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <!-- Borde brillante de la carta -->
+    <linearGradient id="pcm-border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="50%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <!-- Gradiente del pixel spark -->
+    <radialGradient id="pcm-spark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Borde exterior del ícono -->
+    <linearGradient id="pcm-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glow-sm">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-md">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base redondeada -->
+  <rect width="64" height="64" rx="14" fill="url(#pcm-bg)"/>
+
+  <!-- Carta inclinada trasera (sombra) -->
+  <rect x="16" y="14" width="26" height="34" rx="4"
+        fill="rgba(59,130,246,0.15)"
+        transform="rotate(-8 29 31)"/>
+
+  <!-- Carta principal (ligeramente inclinada) -->
+  <rect x="17" y="12" width="26" height="34" rx="4"
+        fill="url(#pcm-card)"
+        transform="rotate(5 30 29)"/>
+
+  <!-- Borde brillante de la carta -->
+  <rect x="17" y="12" width="26" height="34" rx="4"
+        fill="none"
+        stroke="url(#pcm-border)"
+        stroke-width="1.2"
+        transform="rotate(5 30 29)"
+        filter="url(#glow-sm)"/>
+
+  <!-- "P" geométrica integrada en la carta -->
+  <text x="27" y="32"
+        font-family="'Oxanium', 'Arial Black', sans-serif"
+        font-weight="800"
+        font-size="13"
+        fill="rgba(255,255,255,0.92)"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        transform="rotate(5 27 32)"
+        filter="url(#glow-sm)">P</text>
+
+  <!-- Líneas de movimiento (intercambio) -->
+  <line x1="46" y1="22" x2="52" y2="18" stroke="#22D3EE" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="48" y1="28" x2="55" y2="26" stroke="#3B82F6" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="46" y1="34" x2="53" y2="34" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Pixel spark (esquina superior derecha) — el pixel brillante de la marca -->
+  <rect x="43" y="10" width="5" height="5" rx="1"
+        fill="url(#pcm-spark)"
+        filter="url(#glow-md)"/>
+  <!-- Destellos del spark -->
+  <rect x="47" y="8"  width="1.5" height="1.5" rx="0.5" fill="#22D3EE" opacity="0.8"/>
+  <rect x="48.5" y="13" width="1.5" height="1.5" rx="0.5" fill="#22D3EE" opacity="0.6"/>
+  <rect x="43" y="16" width="1.5" height="1.5" rx="0.5" fill="#60A5FA" opacity="0.5"/>
+
+  <!-- Punto brillante en la carta (holográfico) -->
+  <circle cx="29" cy="18" r="2.5" fill="rgba(255,255,255,0.18)" transform="rotate(5 29 18)"/>
+
+  <!-- Borde exterior del ícono con gradiente -->
+  <rect width="64" height="64" rx="14"
+        fill="none"
+        stroke="url(#pcm-ring)"
+        stroke-width="1.5"/>
+</svg>

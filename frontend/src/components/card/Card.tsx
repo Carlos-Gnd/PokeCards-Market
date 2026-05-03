@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useTilt3D } from './hooks/useTilt3D';
 import { getTheme } from './rarity-themes';
 import { getVariantVisualStyle } from './variant-visuals';
-import { AmbientGlow } from './layers/AmbientGlow';
 import { RaysLayer } from './layers/RaysLayer';
 import { FoilLayer } from './layers/FoilLayer';
 import { HoloLayer } from './layers/HoloLayer';
@@ -92,8 +91,6 @@ function CardImpl({
       className={`group relative ${dim.w} ${dim.aspect} cursor-pointer select-none`}
       style={{ perspective: 1100, transformStyle: 'preserve-3d' }}
     >
-      {!lightweight && <AmbientGlow theme={theme} hoverGlow={tiltMotion.glowOpacity} />}
-
       <motion.div
         className="absolute inset-0 rounded-2xl overflow-hidden"
         style={{

@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,148 +9,206 @@
 
   html, body, #root {
     height: 100%;
-    background: #0B1020;
+    background: #0B0F19;
   }
 
   body {
     @apply font-sans text-white antialiased;
     background:
-      radial-gradient(1200px 700px at 80% -10%, rgba(109, 94, 248, 0.12), transparent 60%),
-      radial-gradient(900px 600px at 0% 100%, rgba(53, 200, 255, 0.10), transparent 60%),
-      #0B1020;
+      radial-gradient(1400px 800px at 75% -5%,  rgba(59, 130, 246, 0.10), transparent 55%),
+      radial-gradient(1000px 700px at -5% 110%, rgba(139, 92, 246, 0.10), transparent 55%),
+      radial-gradient(600px 500px at 50% 60%,   rgba(34, 211, 238, 0.04), transparent 60%),
+      #0B0F19;
     background-attachment: fixed;
   }
 
   ::selection {
-    background: rgba(109, 94, 248, 0.45);
+    background: rgba(59, 130, 246, 0.45);
     color: white;
   }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(109, 94, 248, 0.25);
+    background: rgba(59, 130, 246, 0.22);
     border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(109, 94, 248, 0.45);
+    background: rgba(59, 130, 246, 0.42);
+    background-clip: padding-box;
+  }
+
+  /* Jerarquía tipográfica */
+  h1 { @apply font-display font-bold tracking-tight; }
+  h2 { @apply font-display font-semibold tracking-tight; }
+  h3 { @apply font-display font-semibold; }
+
+  /* Selects nativos coherentes con el tema */
+  select option {
+    background: #141B2D;
+    color: white;
   }
 }
 
-/* ============================================================
-   ARCADIUM Card System — keyframes globales (GPU-friendly)
-   ============================================================ */
-@keyframes arc-holo-sweep {
+/* ================================================================
+   PokéCards Market — Card System Keyframes
+   ================================================================ */
+@keyframes pcm-holo-sweep {
   0%, 100% { background-position: -100% 0; }
   50%      { background-position: 200% 0; }
 }
-@keyframes arc-holo-shift {
+@keyframes pcm-holo-shift {
   0%   { background-position: 0% 50%; }
   100% { background-position: 300% 50%; }
 }
-@keyframes arc-foil-shift {
+@keyframes pcm-foil-shift {
   0%, 100% { background-position: 0% 50%; }
   50%      { background-position: 100% 50%; }
 }
-@keyframes arc-foil-rotate {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-@keyframes arc-rays-rotate {
+@keyframes pcm-rays-rotate {
   0%   { transform: translate(-50%, -50%) rotate(0deg); }
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
-@keyframes arc-shimmer-sweep {
+@keyframes pcm-shimmer-sweep {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
-@keyframes arc-sparkle {
-  0%, 100%  { opacity: 0; transform: scale(0.5); }
+@keyframes pcm-sparkle {
+  0%, 100%  { opacity: 0; transform: scale(0.4); }
   20%, 80%  { opacity: 1; transform: scale(1); }
 }
-@keyframes arc-breathe {
-  0%, 100% { opacity: 0.45; transform: scale(0.96); }
-  50%      { opacity: 0.85; transform: scale(1.04); }
+@keyframes pcm-breathe {
+  0%, 100% { opacity: 0.40; transform: scale(0.95); }
+  50%      { opacity: 0.80; transform: scale(1.05); }
 }
+/* Alias: los componentes existentes usan arc-* — mantenemos compatibilidad */
+@keyframes arc-holo-sweep   { 0%, 100% { background-position: -100% 0; } 50% { background-position: 200% 0; } }
+@keyframes arc-holo-shift   { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+@keyframes arc-foil-shift   { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes arc-foil-rotate  { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes arc-rays-rotate  { 0% { transform: translate(-50%,-50%) rotate(0deg); } 100% { transform: translate(-50%,-50%) rotate(360deg); } }
+@keyframes arc-shimmer-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+@keyframes arc-sparkle      { 0%, 100% { opacity: 0; transform: scale(0.5); } 20%, 80% { opacity: 1; transform: scale(1); } }
+@keyframes arc-breathe      { 0%, 100% { opacity: 0.45; transform: scale(0.96); } 50% { opacity: 0.85; transform: scale(1.04); } }
 
-/*
-  ELIMINADOS (causaban el efecto "color que cubre media carta"):
-  - @keyframes arc-premium-shine  → usado por arc-static-card-shine::after
-  - @keyframes arc-luminous-sheen → usado por arc-luminous-foil::after
-  Ambas animaciones producían un barrido de color diagonal muy notorio
-  que, al combinarse con el tilt 3D, parecía rotar sobre la carta.
-*/
-
+/* ================================================================
+   Componentes UI — PokéCards Market
+   ================================================================ */
 @layer components {
+
+  /* ── Glassmorphism ─────────────────────────────────────────── */
   .glass {
-    @apply backdrop-blur-xl bg-white/[0.03] border border-white/[0.06];
+    @apply backdrop-blur-xl bg-white/[0.028] border border-white/[0.07];
   }
-
   .glass-strong {
-    @apply backdrop-blur-2xl bg-white/[0.05] border border-white/[0.08];
+    @apply backdrop-blur-2xl bg-white/[0.04] border border-white/[0.09];
+  }
+  /* Glass con tinte azul — para navbars y surfaces premium */
+  .glass-blue {
+    backdrop-filter: blur(20px) saturate(1.4);
+    background: rgba(11, 15, 25, 0.75);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.12);
   }
 
+  /* ── Texto gradiente ───────────────────────────────────────── */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-aurora;
+    @apply bg-clip-text text-transparent bg-brand;
+  }
+  .text-gradient-subtle {
+    background: linear-gradient(90deg, #60A5FA 0%, #A78BFA 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .heading-display {
-    @apply font-display font-bold tracking-tight;
-  }
-
+  /* ── Botones ───────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold
-           bg-primary text-white shadow-glow-primary
-           hover:bg-primary-glow hover:shadow-glow-primary
-           active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-sm
+           text-white transition-all duration-200 active:scale-[0.97]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+    box-shadow: 0 0 18px rgba(59,130,246,0.35), 0 1px 0 rgba(255,255,255,0.08) inset;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #60A5FA 0%, #818CF8 100%);
+    box-shadow: 0 0 26px rgba(59,130,246,0.55), 0 1px 0 rgba(255,255,255,0.10) inset;
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold
-           bg-white/[0.05] text-white border border-white/10
-           hover:bg-white/[0.08] hover:border-white/20
-           active:scale-[0.98] transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold text-sm
+           text-white/90 border transition-all duration-200 active:scale-[0.97];
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.10);
+  }
+  .btn-secondary:hover {
+    background: rgba(59,130,246,0.08);
+    border-color: rgba(59,130,246,0.30);
+    color: white;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium
-           text-white/80 hover:text-white hover:bg-white/[0.06] transition-all duration-150;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium text-sm
+           text-white/70 hover:text-white transition-all duration-150;
+  }
+  .btn-ghost:hover {
+    background: rgba(59,130,246,0.08);
   }
 
+  /* ── Inputs ────────────────────────────────────────────────── */
   .input {
-    @apply w-full rounded-xl bg-white/[0.04] border border-white/10
-           px-4 py-3 text-white placeholder:text-white/40
-           focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/30
-           transition-all duration-150;
+    @apply w-full rounded-xl px-4 py-2.5 text-white text-sm
+           placeholder:text-white/35
+           focus:outline-none transition-all duration-150;
+    background: rgba(255,255,255,0.038);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .input:focus {
+    border-color: rgba(59,130,246,0.55);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    background: rgba(255,255,255,0.05);
   }
 
+  /* ── Cards de superficie ───────────────────────────────────── */
   .card-base {
-    @apply relative rounded-2xl bg-surface border border-white/[0.06] shadow-card overflow-hidden;
+    @apply relative rounded-2xl overflow-hidden;
+    background: #141B2D;
+    border: 1px solid rgba(255,255,255,0.055);
+    box-shadow: 0 12px 32px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03);
+  }
+  /* Card con acento azul en la parte superior */
+  .card-accent {
+    @apply card-base;
+    border-top: 2px solid rgba(59,130,246,0.5);
   }
 
-  .shimmer-overlay {
-    background: linear-gradient(
-      105deg,
-      transparent 35%,
-      rgba(255, 255, 255, 0.10) 45%,
-      rgba(255, 255, 255, 0.18) 50%,
-      rgba(255, 255, 255, 0.10) 55%,
-      transparent 65%
-    );
-    background-size: 200% 100%;
+  /* ── Badges ────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] uppercase tracking-[0.14em] font-semibold;
+  }
+  .badge-primary {
+    @apply badge;
+    background: rgba(59,130,246,0.18);
+    border: 1px solid rgba(59,130,246,0.35);
+    color: #93C5FD;
+  }
+  .badge-secondary {
+    @apply badge;
+    background: rgba(139,92,246,0.18);
+    border: 1px solid rgba(139,92,246,0.35);
+    color: #C4B5FD;
   }
 
-  /*
-    ELIMINADAS:
-    .arc-static-card-shine  — sweep blanco diagonal que barría media carta
-    .arc-static-card-shine::after — animación arc-premium-shine perpetua
-    .arc-luminous-foil      — foil de líneas + sweep cian para variante luminous
-    .arc-luminous-foil::after — animación arc-luminous-sheen perpetua
+  /* ── Separador con gradiente ───────────────────────────────── */
+  .divider-gradient {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.25) 50%, transparent);
+  }
 
-    Estos estilos no se usan más. El efecto de brillo interactivo
-    se maneja exclusivamente desde ShineLayer (motion values, sin CSS).
-    La variante luminous queda representada solo por su frameBorder
-    y glowShadow definidos en variant-visuals.ts.
-  */
+  /* ── Glow de fondo para secciones ─────────────────────────── */
+  .section-glow-blue   { @apply absolute pointer-events-none rounded-full blur-[120px] bg-primary/10; }
+  .section-glow-purple { @apply absolute pointer-events-none rounded-full blur-[120px] bg-secondary/10; }
+  .section-glow-cyan   { @apply absolute pointer-events-none rounded-full blur-[140px] bg-accent/8; }
 }
