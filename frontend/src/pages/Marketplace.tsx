@@ -19,6 +19,8 @@ const SORT_OPTIONS = [
   { v: 'name-asc', label: 'Nombre (A-Z)' },
 ] as const;
 
+type SortValue = typeof SORT_OPTIONS[number]['v'];
+
 const RARITY_ORDER: Record<string, number> = {
   eternal: 7, ascendant: 6, apex: 5, elite: 4, prime: 3, alloy: 2, core: 1,
 };
@@ -33,16 +35,31 @@ export function MarketplacePage() {
   const [rarities, setRarities] = useState<Set<string>>(new Set());
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [sort, setSort] = useState<typeof SORT_OPTIONS[number]['v']>('rarity-desc');
+  const [sort, setSort] = useState<SortValue>('rarity-desc');
   const [selected, setSelected] = useState<ArcadiumCard | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetchCatalog()
-      .then((data) => setCards(data))
-      .catch((err) => setError(err?.uiMessage || 'No se pudo cargar el catálogo'))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setCards(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const message =
+            err && typeof err === 'object' && 'uiMessage' in err && typeof err.uiMessage === 'string'
+              ? err.uiMessage
+              : 'No se pudo cargar el catálogo';
+          setError(message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -78,7 +95,11 @@ export function MarketplacePage() {
 
   const toggleSet = (set: Set<string>, value: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
-    next.has(value) ? next.delete(value) : next.add(value);
+    if (next.has(value)) {
+      next.delete(value);
+    } else {
+      next.add(value);
+    }
     setter(next);
   };
 
@@ -104,16 +125,16 @@ export function MarketplacePage() {
   }
 
   return (
-    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+    <div className="max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 py-7 lg:py-10">
       {/* Header */}
-      <div className="mb-5">
+      <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.25em] text-primary/80 mb-2">Marketplace</p>
         <h1 className="font-display font-black text-3xl lg:text-4xl mb-1">Catálogo de Cartas</h1>
         <p className="text-sm text-white/55">{cards.length} cartas dinámicas · Datos desde PokéAPI · Rarezas determinísticas</p>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row gap-3 mb-5">
+      <div className="flex flex-col lg:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
           <input
@@ -127,7 +148,7 @@ export function MarketplacePage() {
         <div className="flex items-center gap-2">
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value as any)}
+            onChange={(e) => setSort(e.target.value as SortValue)}
             className="input min-w-[200px]"
           >
             {SORT_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
@@ -229,11 +250,21 @@ export function MarketplacePage() {
           <p className="text-xs text-white/45 mb-4">
             Mostrando <span className="text-white/80 font-mono">{filtered.length}</span> de {cards.length} cartas
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5 justify-items-center pt-3">
+          {/*
+            BUG FIX: Se eliminó el wrapper `div.w-full.max-w-[210px]` alrededor de <Card>.
+            Ese wrapper duplicaba la restricción de ancho ya presente en Card size="sm",
+            causando que en pantallas medianas las cards se aplastaran porque el contenedor
+            del grid (auto) + el wrapper (210px) + el Card (w-full dentro del wrapper)
+            producían comportamientos inconsistentes.
+
+            Solución: el contenedor del grid define el ancho responsive de la celda,
+            y Card usa w-full para ocuparla limpiamente.
+          */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6 lg:gap-y-8 pt-4">
             {filtered.map((card) => (
               <div
                 key={card.pokemonId}
-                className="w-full max-w-[170px]"
+                className="w-full max-w-[180px] sm:max-w-[210px] xl:max-w-[240px] justify-self-center"
               >
                 <Card
                   card={card}

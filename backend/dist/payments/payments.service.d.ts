@@ -9,7 +9,7 @@ export declare class PaymentsService {
     constructor(prisma: PrismaService, cards: CardsService, paypal: PaypalClient);
     createOrder(userId: string, pokemonId: number): Promise<{
         paypalOrderId: string;
-        approveUrl: any;
+        approveUrl: string | undefined;
         amount: string;
         card: {
             id: number;
@@ -19,11 +19,17 @@ export declare class PaymentsService {
             variant: string;
         };
     }>;
+    private toPublicUserCard;
     captureOrder(userId: string, paypalOrderId: string): Promise<{
         alreadyCaptured: boolean;
-        userCard: ({
+        userCard: {
+            id: string;
+            quantity: number;
+            obtainedFrom: string;
+            acquiredAt: Date;
+            cardId: number;
             card: {
-                id: bigint;
+                id: number;
                 pokemonId: number;
                 name: string;
                 type: string;
@@ -31,20 +37,9 @@ export declare class PaymentsService {
                 rarity: string;
                 variant: string;
                 imageUrl: string;
-                marketPrice: import("@prisma/client/runtime/library").Decimal;
-                createdAt: Date;
-                updatedAt: Date;
+                marketPrice: number;
             };
-        } & {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            orderId: string | null;
-            userId: string;
-            cardId: bigint;
-            quantity: number;
-            obtainedFrom: string;
-        }) | null;
+        } | null;
         success?: undefined;
         paypalOrderId?: undefined;
         amount?: undefined;
@@ -53,10 +48,13 @@ export declare class PaymentsService {
         paypalOrderId: string;
         amount: number;
         userCard: {
+            id: string;
+            quantity: number;
+            obtainedFrom: string;
+            acquiredAt: Date;
             cardId: number;
             card: {
                 id: number;
-                marketPrice: number;
                 pokemonId: number;
                 name: string;
                 type: string;
@@ -64,40 +62,28 @@ export declare class PaymentsService {
                 rarity: string;
                 variant: string;
                 imageUrl: string;
-                createdAt: Date;
-                updatedAt: Date;
+                marketPrice: number;
             };
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            orderId: string | null;
-            userId: string;
-            quantity: number;
-            obtainedFrom: string;
         };
         alreadyCaptured?: undefined;
     }>;
     history(userId: string): Promise<{
-        cardId: number;
+        id: string;
+        paypalOrderId: string;
+        status: string;
         amount: number;
+        createdAt: Date;
+        updatedAt: Date;
+        cardId: number;
         card: {
             id: number;
-            marketPrice: number;
             pokemonId: number;
             name: string;
             type: string;
-            secondaryType: string | null;
             rarity: string;
             variant: string;
             imageUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
+            marketPrice: number;
         };
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        userId: string;
-        paypalOrderId: string;
-        status: string;
     }[]>;
 }

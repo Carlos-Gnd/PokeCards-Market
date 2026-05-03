@@ -1,14 +1,28 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Library, Store, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
+import { Library, PackageOpen, Store, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useCollectionStore } from '../../store/collectionStore';
 import { cn } from '../../lib/utils';
+
+interface UserMetadata {
+  username?: string;
+}
 
 export function TopNavBar() {
   const { user, signOut } = useAuthStore();
   const { items } = useCollectionStore();
   const navigate = useNavigate();
-  const username = (user?.user_metadata as any)?.username || user?.email?.split('@')[0];
+  const metadata = user?.user_metadata as UserMetadata | undefined;
+  const username = metadata?.username || user?.email?.split('@')[0];
+
+  /*
+    BUG FIX: `items.length` cuenta entradas únicas, pero el usuario puede tener
+    múltiples copias de la misma carta (quantity > 1). El contador del badge
+    ahora muestra el total real de cartas (sumando quantities).
+    
+    Si el usuario tiene 3x Pikachu y 2x Charizard: length=2 (mal) vs totalCards=5 (bien).
+  */
+  const totalCards = items.reduce((acc, e) => acc + e.quantity, 0);
 
   const handleLogout = async () => {
     await signOut();
@@ -45,6 +59,17 @@ export function TopNavBar() {
           >
             <Store size={16} /> Marketplace
           </NavLink>
+          <NavLink
+            to="/booster"
+            className={({ isActive }) =>
+              cn(
+                'btn-ghost gap-2',
+                isActive && 'text-white bg-white/[0.06]',
+              )
+            }
+          >
+            <PackageOpen size={16} /> Sobres
+          </NavLink>
           {user && (
             <NavLink
               to="/collection"
@@ -56,9 +81,9 @@ export function TopNavBar() {
               }
             >
               <Library size={16} /> Mi Colección
-              {items.length > 0 && (
+              {totalCards > 0 && (
                 <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/30 text-white font-mono">
-                  {items.length}
+                  {totalCards}
                 </span>
               )}
             </NavLink>

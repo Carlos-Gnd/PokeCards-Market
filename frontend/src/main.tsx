@@ -2,26 +2,25 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { PayPalScriptProvider, type ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
 import App from './App';
 import './styles/index.css';
 
 const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string;
+const paypalOptions: ReactPayPalScriptOptions = {
+  clientId: paypalClientId,
+  currency: 'USD',
+  intent: 'capture',
+  components: 'buttons',
+  // Solo botón PayPal: sin tarjeta, sin crédito, sin pay-later
+  'disable-funding': 'card,credit,paylater,venmo,sepa,bancontact',
+  'enable-funding': 'paypal',
+};
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <PayPalScriptProvider
-        options={{
-          clientId: paypalClientId,
-          currency: 'USD',
-          intent: 'capture',
-          components: 'buttons',
-          // Solo botón PayPal: sin tarjeta, sin crédito, sin pay-later
-          'disable-funding': 'card,credit,paylater,venmo,sepa,bancontact',
-          'enable-funding': 'paypal',
-        } as any}
-      >
+      <PayPalScriptProvider options={paypalOptions}>
         <App />
         <Toaster
           position="top-right"

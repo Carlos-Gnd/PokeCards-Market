@@ -8,11 +8,18 @@ interface Props {
 }
 
 /**
- * ShineLayer — gradiente radial siguiendo el cursor. Se anima con motion values
- * (no React state) para evitar re-renders. La opacidad se eleva en hover.
+ * ShineLayer — brillo sutil que sigue al cursor.
+ *
+ * FIX: El gradiente original era demasiado ancho (circle 34% de radio colocado
+ * en la posición exacta del cursor) lo que causaba que una mancha blanco-dorada
+ * cubriera visualmente media carta y fuera muy llamativa.
+ *
+ * Nuevo comportamiento: gradiente mucho más pequeño y sutil, con radio ~14%,
+ * mezclado en `overlay` en lugar de `soft-light` para que el efecto sea un
+ * destello puntual tipo "gloss" en vez de una mancha de color grande.
  */
 function ShineLayerImpl({ shineX, shineY, opacity }: Props) {
-  const bg = useMotionTemplate`radial-gradient(circle at ${shineX} ${shineY}, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.16) 18%, transparent 45%)`;
+  const bg = useMotionTemplate`radial-gradient(circle at ${shineX} ${shineY}, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 10%, transparent 22%)`;
   return (
     <motion.div
       aria-hidden

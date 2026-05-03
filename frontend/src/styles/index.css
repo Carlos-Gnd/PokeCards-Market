@@ -76,6 +76,14 @@
   50%      { opacity: 0.85; transform: scale(1.04); }
 }
 
+/*
+  ELIMINADOS (causaban el efecto "color que cubre media carta"):
+  - @keyframes arc-premium-shine  → usado por arc-static-card-shine::after
+  - @keyframes arc-luminous-sheen → usado por arc-luminous-foil::after
+  Ambas animaciones producían un barrido de color diagonal muy notorio
+  que, al combinarse con el tilt 3D, parecía rotar sobre la carta.
+*/
+
 @layer components {
   .glass {
     @apply backdrop-blur-xl bg-white/[0.03] border border-white/[0.06];
@@ -134,4 +142,17 @@
     );
     background-size: 200% 100%;
   }
+
+  /*
+    ELIMINADAS:
+    .arc-static-card-shine  — sweep blanco diagonal que barría media carta
+    .arc-static-card-shine::after — animación arc-premium-shine perpetua
+    .arc-luminous-foil      — foil de líneas + sweep cian para variante luminous
+    .arc-luminous-foil::after — animación arc-luminous-sheen perpetua
+
+    Estos estilos no se usan más. El efecto de brillo interactivo
+    se maneja exclusivamente desde ShineLayer (motion values, sin CSS).
+    La variante luminous queda representada solo por su frameBorder
+    y glowShadow definidos en variant-visuals.ts.
+  */
 }

@@ -12,12 +12,12 @@ interface Props {
  */
 function ParticlesLayerImpl({ theme, seed }: Props) {
   const variant = theme.layers.particles;
-  if (!variant) return null;
-
   const count = variant === 'ring' ? 18 : variant === 'dense' ? 14 : variant === 'medium' ? 10 : 6;
   const accent = theme.accentColor;
 
   const particles = useMemo(() => {
+    if (!variant) return [];
+
     const items: Array<{ x: number; y: number; size: number; delay: number; duration: number }> = [];
     let s = seed * 9301 + 49297;
     const next = () => {
@@ -49,6 +49,8 @@ function ParticlesLayerImpl({ theme, seed }: Props) {
     }
     return items;
   }, [count, seed, variant]);
+
+  if (!variant) return null;
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 z-[6] overflow-hidden">

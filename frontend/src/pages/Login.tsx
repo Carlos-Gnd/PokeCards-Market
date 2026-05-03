@@ -6,6 +6,14 @@ import { Sparkles, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Spinner } from '../components/ui/Spinner';
 
+interface LocationState {
+  from?: string;
+}
+
+function getErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export function LoginPage() {
   const { user, loading: authLoading, signIn } = useAuthStore();
   const navigate = useNavigate();
@@ -15,7 +23,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!authLoading && user) {
-    const from = (location.state as any)?.from || '/marketplace';
+    const from = (location.state as LocationState | null)?.from || '/marketplace';
     return <Navigate to={from} replace />;
   }
 
@@ -25,10 +33,10 @@ export function LoginPage() {
     try {
       await signIn(email, password);
       toast.success('¡Bienvenido a ARCADIUM!');
-      const from = (location.state as any)?.from || '/marketplace';
+      const from = (location.state as LocationState | null)?.from || '/marketplace';
       navigate(from, { replace: true });
-    } catch (err: any) {
-      toast.error(err?.message || 'No pudimos iniciar sesión');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'No pudimos iniciar sesión'));
     } finally {
       setSubmitting(false);
     }

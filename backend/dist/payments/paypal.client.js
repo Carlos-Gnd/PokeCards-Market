@@ -51,25 +51,69 @@ let PaypalClient = PaypalClient_1 = class PaypalClient {
     config;
     logger = new common_1.Logger(PaypalClient_1.name);
     client;
+    ready = false;
     constructor(config) {
         this.config = config;
     }
     onModuleInit() {
         const clientId = this.config.get('PAYPAL_CLIENT_ID');
         const clientSecret = this.config.get('PAYPAL_CLIENT_SECRET');
-        const env = (this.config.get('PAYPAL_ENV') || 'sandbox').toLowerCase();
+        const env = (this.config.get('PAYPAL_ENV') ?? 'sandbox').toLowerCase();
         if (!clientId || !clientSecret) {
-            this.logger.error('Faltan PAYPAL_CLIENT_ID o PAYPAL_CLIENT_SECRET en .env');
-            throw new common_1.InternalServerErrorException('PayPal credentials missing');
+            this.logger.warn('PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET no configurados — PayPal en modo degradado');
+            return;
         }
         const environment = env === 'live'
             ? new paypal.core.LiveEnvironment(clientId, clientSecret)
             : new paypal.core.SandboxEnvironment(clientId, clientSecret);
         this.client = new paypal.core.PayPalHttpClient(environment);
+        this.ready = true;
         this.logger.log(`PayPal client iniciado (${env})`);
     }
+    isReady() {
+        return this.ready;
+    }
     get http() {
+        if (!this.ready) {
+            throw new common_1.InternalServerErrorException('PayPal no está configurado');
+        }
         return this.client;
+    }
+    async createOrder(amountUsd, referenceId, description) {
+        const request = new paypal.orders.OrdersCreateRequest();
+        request.prefer('return=representation');
+        request.requestBody({
+            intent: 'CAPTURE',
+            purchase_units: [
+                {
+                    reference_id: referenceId,
+                    description,
+                    amount: { currency_code: 'USD', value: amountUsd.toFixed(2) },
+                },
+            ],
+            application_context: {
+                brand_name: 'ARCADIUM',
+                user_action: 'PAY_NOW',
+                shipping_preference: 'NO_SHIPPING',
+            },
+        });
+        const response = await this.http.execute(request);
+        const result = response.result;
+        const links = result.links ?? [];
+        const approveUrl = links.find((l) => l.rel === 'approve')?.href;
+        return { id: result.id, approveUrl, links };
+    }
+    async captureOrder(paypalOrderId) {
+        const captureReq = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
+        captureReq.requestBody({});
+        const result = await this.http.execute(captureReq);
+        const captureResult = result.result;
+        const capturedAmount = Number(captureResult.purchase_units?.[0]?.payments?.captures?.[0]?.amount
+            ?.value ?? null);
+        return {
+            status: captureResult.status ?? 'UNKNOWN',
+            capturedAmount: Number.isFinite(capturedAmount) ? capturedAmount : null,
+        };
     }
 };
 exports.PaypalClient = PaypalClient;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { Library, Sparkles, TrendingUp } from 'lucide-react';
 import { useCollectionStore } from '../store/collectionStore';
@@ -36,7 +36,7 @@ export function CollectionVaultPage() {
   if (loading) return <FullscreenLoader label="Abriendo tu bóveda…" />;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
@@ -84,21 +84,49 @@ export function CollectionVaultPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8 justify-items-center pt-6">
+          {/*
+            BUG FIX: El grid ahora usa max-w fijo por columna para que las cards
+            no se estiren en pantallas grandes y mantengan una lectura uniforme
+            tipo binder.
+          */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6 lg:gap-y-8 pt-6">
             {filtered.map((entry, idx) => {
+              /*
+                BUG FIX CRÍTICO: Antes se construía un ArcadiumCard falso con
+                stats hardcodeadas (hp:60, attack:0, etc.) y campos faltantes
+                (height:0, weight:0, abilities:[]).
+
+                UserCardEntry.card NO tiene stats/abilities/height/weight porque
+                viene del express-api que solo guarda datos de la carta TCG.
+                La solución correcta es construir el ArcadiumCard con valores
+                por defecto seguros y coherentes.
+              */
               const card: ArcadiumCard = {
-                ...entry.card,
+                pokemonId: entry.card.pokemonId,
+                name: entry.card.name,
+                type: entry.card.type,
+                secondaryType: entry.card.secondaryType,
+                rarity: entry.card.rarity,
                 rarityLabel: entry.card.rarity,
-                stats: { hp: 60, attack: 0, defense: 0, speed: 0 },
-                height: 0, weight: 0, abilities: [],
+                variant: entry.card.variant,
+                imageUrl: entry.card.imageUrl,
+                marketPrice: entry.card.marketPrice,
+                // Stats no disponibles desde la colección — se usan valores vacíos
+                // para no mostrar datos falsos en CardDetailModal
+                stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
+                height: 0,
+                weight: 0,
+                abilities: [],
               };
+
               return (
                 <motion.div
                   key={entry.id}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: Math.min(idx * 0.03, 0.4) }}
-                  className="relative"
+                  // FIX: El contenedor define el ancho máximo, la Card usa w-full
+                  className="relative w-full max-w-[170px] sm:max-w-[200px] xl:max-w-[220px] justify-self-center"
                 >
                   <Card card={card} owned onClick={() => setSelected(card)} size="sm" />
                   {entry.quantity > 1 && (
@@ -123,7 +151,9 @@ export function CollectionVaultPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint: string }) {
+function StatCard({
+  icon: Icon, label, value, hint,
+}: { icon: ComponentType<{ size?: number; className?: string }>; label: string; value: string; hint: string }) {
   return (
     <div className="p-5 rounded-2xl glass">
       <Icon size={20} className="text-primary mb-2" />

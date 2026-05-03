@@ -15,6 +15,7 @@ const cards_module_1 = require("./cards/cards.module");
 const payments_module_1 = require("./payments/payments.module");
 const collection_module_1 = require("./collection/collection.module");
 const users_module_1 = require("./users/users.module");
+const booster_module_1 = require("./booster/booster.module");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -29,6 +30,7 @@ exports.AppModule = AppModule = __decorate([
             cards_module_1.CardsModule,
             payments_module_1.PaymentsModule,
             collection_module_1.CollectionModule,
+            booster_module_1.BoosterModule,
         ],
         controllers: [health_controller_1.HealthController],
     })

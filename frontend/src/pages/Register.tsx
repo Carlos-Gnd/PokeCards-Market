@@ -6,6 +6,10 @@ import { Sparkles, Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react
 import { useAuthStore } from '../store/authStore';
 import { Spinner } from '../components/ui/Spinner';
 
+function getErrorMessage(err: unknown, fallback: string) {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export function RegisterPage() {
   const { user, loading: authLoading, signUp } = useAuthStore();
   const navigate = useNavigate();
@@ -27,8 +31,8 @@ export function RegisterPage() {
       await signUp(email, password, username);
       toast.success('¡Cuenta creada! Empieza a coleccionar.');
       navigate('/marketplace', { replace: true });
-    } catch (err: any) {
-      toast.error(err?.message || 'No pudimos crear tu cuenta');
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, 'No pudimos crear tu cuenta'));
     } finally {
       setSubmitting(false);
     }

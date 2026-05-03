@@ -3,8 +3,18 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
 import '../../styles/booster.css';
 
-const BOOSTER_API_URL =
-  import.meta.env.VITE_BOOSTER_API_URL ?? 'http://localhost:3001';
+/**
+ * FUSIÓN DE BACKENDS:
+ * Antes apuntaba a VITE_BOOSTER_API_URL (puerto 3001, express-api).
+ * Ahora usa VITE_API_URL (puerto 3000, NestJS) porque los endpoints
+ * del booster fueron migrados al módulo BoosterModule de NestJS.
+ *
+ * Cambios de rutas:
+ *   GET  /api/booster-pack              → GET  /api/booster/demo
+ *   POST /api/booster-pack/create-order → POST /api/booster/create-order
+ *   POST /api/booster-pack/capture-order → POST /api/booster/capture-order
+ */
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
 
@@ -45,7 +55,7 @@ function rarityBadgeClass(rareza) {
 }
 
 export default function BoosterPack({ userId = null }) {
-  const [phase, setPhase] = useState('idle'); // 'idle' | 'paying' | 'opening' | 'revealed'
+  const [phase, setPhase] = useState('idle');
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState(new Set());
   const [error, setError] = useState(null);
@@ -71,14 +81,14 @@ export default function BoosterPack({ userId = null }) {
 
   const handleCreateOrder = useCallback(async () => {
     setError(null);
-    const res = await fetch(`${BOOSTER_API_URL}/api/booster-pack/create-order`, {
+    const res = await fetch(`${API_URL}/api/booster/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? `HTTP ${res.status}`);
+      throw new Error(body.message ?? `HTTP ${res.status}`);
     }
     const data = await res.json();
     return data.paypalOrderId;
@@ -89,14 +99,14 @@ export default function BoosterPack({ userId = null }) {
       setError(null);
       setPhase('paying');
       try {
-        const res = await fetch(`${BOOSTER_API_URL}/api/booster-pack/capture-order`, {
+        const res = await fetch(`${API_URL}/api/booster/capture-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ paypalOrderId: data.orderID, userId }),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? `HTTP ${res.status}`);
+          throw new Error(body.message ?? `HTTP ${res.status}`);
         }
         const result = await res.json();
         setSuccess({
@@ -116,7 +126,7 @@ export default function BoosterPack({ userId = null }) {
     setError(null);
     setPhase('paying');
     try {
-      const res = await fetch(`${BOOSTER_API_URL}/api/booster-pack`, { method: 'GET' });
+      const res = await fetch(`${API_URL}/api/booster/demo`, { method: 'GET' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!Array.isArray(data.cartas) || data.cartas.length === 0) {
@@ -154,7 +164,7 @@ export default function BoosterPack({ userId = null }) {
   const showPaymentUI = phase === 'idle' || phase === 'paying';
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-12">
+    <div className="w-full max-w-5xl mx-auto px-4 py-12">
       <header className="text-center mb-10">
         <p className="text-xs uppercase tracking-[0.3em] text-white/50 mb-3">
           Pokémon TCG · Scarlet &amp; Violet · Prismatic Evolutions
@@ -200,7 +210,7 @@ export default function BoosterPack({ userId = null }) {
               role="img"
               aria-label="Sobre Prismatic Evolutions"
               animate={{
-                y: [0, -8, 0],
+                y: [0, -10, 0],
                 transition: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' },
               }}
             />
@@ -272,7 +282,7 @@ export default function BoosterPack({ userId = null }) {
             exit={{ opacity: 0 }}
             className="flex flex-col items-center"
           >
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 w-full max-w-4xl mx-auto bp-perspective">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
                 const high = isHighRarity(card);
                 const legendary = LEGENDARY_RARITIES.has(card.rareza);
@@ -280,11 +290,11 @@ export default function BoosterPack({ userId = null }) {
                 return (
                   <motion.div
                     key={card.id}
-                    initial={{ opacity: 0, y: 60, rotate: -6 }}
+                    initial={{ opacity: 0, y: 50, rotate: -5 }}
                     animate={{ opacity: 1, y: 0, rotate: 0 }}
                     transition={{
                       delay: 0.08 * idx,
-                      duration: 0.55,
+                      duration: 0.5,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                     className="relative"
@@ -331,16 +341,16 @@ export default function BoosterPack({ userId = null }) {
                     </div>
                     {isFlipped && (
                       <motion.div
-                        initial={{ opacity: 0, y: 6 }}
+                        initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.45 }}
-                        className="mt-3 text-center"
+                        transition={{ delay: 0.4 }}
+                        className="mt-2 text-center"
                       >
-                        <p className="font-display font-semibold text-white truncate text-sm">
+                        <p className="font-display font-semibold text-white truncate text-xs">
                           {card.nombre}
                         </p>
                         <div
-                          className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${rarityBadgeClass(
+                          className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${rarityBadgeClass(
                             card.rareza,
                           )}`}
                         >
@@ -353,7 +363,7 @@ export default function BoosterPack({ userId = null }) {
               })}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-12">
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
               <button type="button" onClick={flipAll} className="btn-secondary">
                 Voltear todas
               </button>

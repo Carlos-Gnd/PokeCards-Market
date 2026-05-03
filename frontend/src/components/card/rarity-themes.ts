@@ -69,7 +69,7 @@ export const RARITY_THEMES: Record<RarityTier, RarityTheme> = {
     hoverLift: 4,
   },
 
-  // 2. ALLOY — verde metálico, ligero brillo
+  // 2. ALLOY — cian metálico, ligero brillo
   alloy: {
     tier: 'alloy',
     label: 'Alloy',

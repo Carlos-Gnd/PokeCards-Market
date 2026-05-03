@@ -5,7 +5,7 @@ function FoilLayerImpl({ theme }: { theme: RarityTheme }) {
   const foil = theme.layers.foil;
   if (!foil) return null;
 
-  let bg = '';
+  let bg: string;
   if (foil === 'rainbow') {
     bg =
       'linear-gradient(125deg, rgba(255,0,128,0.5), rgba(0,200,255,0.5), rgba(255,200,0,0.5), rgba(160,0,255,0.5), rgba(255,0,128,0.5))';

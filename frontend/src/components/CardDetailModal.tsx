@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import toast from 'react-hot-toast';
-import { Lock, ShieldCheck, Sparkles, Heart, Swords, Wind } from 'lucide-react';
+import { Lock, ShieldCheck, Sparkles, Heart, Swords, Wind, type LucideIcon } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { TypeBadge } from './ui/TypeBadge';
 import { Spinner } from './ui/Spinner';
@@ -23,6 +23,12 @@ interface Props {
   owned?: boolean;
 }
 
+function getUiMessage(err: unknown, fallback: string) {
+  return err && typeof err === 'object' && 'uiMessage' in err && typeof err.uiMessage === 'string'
+    ? err.uiMessage
+    : fallback;
+}
+
 export function CardDetailModal({ card, open, onClose, owned }: Props) {
   const { user } = useAuthStore();
   const { add } = useCollectionStore();
@@ -33,16 +39,25 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
   if (!card) return null;
   const theme = getTheme(card.rarity);
 
+  // BUG FIX: Detectar si los stats están disponibles (vienen del catálogo)
+  // o si son los valores vacíos que se usan en CollectionVault
+  const hasStats = card.stats && (
+    card.stats.hp > 0 ||
+    card.stats.attack > 0 ||
+    card.stats.defense > 0 ||
+    card.stats.speed > 0
+  );
+
   const handleClose = () => {
     setUnlocked(false);
     onClose();
   };
 
   return (
-    <Modal open={open} onClose={handleClose} size="lg" className="max-w-[1180px] max-h-[94vh] overflow-y-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(280px,1fr)] gap-0">
+    <Modal open={open} onClose={handleClose} size="lg" className="max-w-[1320px] max-h-[94vh] lg:aspect-[21/9] overflow-y-auto">
+      <div className="grid h-full grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(300px,1fr)] gap-0">
         {/* Carta interactiva grande */}
-        <div className="relative px-5 py-8 sm:p-8 lg:p-10 flex items-center justify-center min-h-[520px] lg:min-h-[78vh]">
+        <div className="relative px-5 py-8 sm:p-8 lg:p-8 flex items-center justify-center min-h-[520px] lg:min-h-0">
           <div className="absolute inset-0 opacity-50 pointer-events-none">
             <div
               className="absolute inset-0 blur-[80px]"
@@ -54,9 +69,9 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
             initial={unlocked ? { scale: 0.5, rotate: -8, opacity: 0 } : { scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 180, damping: 16 }}
-            className="relative w-full max-w-[440px]"
+            className="relative w-full max-w-[380px]"
           >
-            <Card card={card} size="xl" enableTilt />
+            <Card card={card} size="xl" enableTilt shineMode="static" />
           </motion.div>
         </div>
 
@@ -90,13 +105,24 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
-            <StatBox icon={Heart} label="HP" value={card.stats.hp} color="text-rose-400" />
-            <StatBox icon={Swords} label="Ataque" value={card.stats.attack} color="text-orange-400" />
-            <StatBox icon={ShieldCheck} label="Defensa" value={card.stats.defense} color="text-blue-400" />
-            <StatBox icon={Wind} label="Velocidad" value={card.stats.speed} color="text-emerald-400" />
-          </div>
+          {/* Stats — solo si están disponibles */}
+          {hasStats ? (
+            <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+              <StatBox icon={Heart} label="HP" value={card.stats.hp} color="text-rose-400" />
+              <StatBox icon={Swords} label="Ataque" value={card.stats.attack} color="text-orange-400" />
+              <StatBox icon={ShieldCheck} label="Defensa" value={card.stats.defense} color="text-blue-400" />
+              <StatBox icon={Wind} label="Velocidad" value={card.stats.speed} color="text-emerald-400" />
+            </div>
+          ) : (
+            /*
+              BUG FIX: Cuando la carta viene de CollectionVault (express-api),
+              los stats son 0 porque no se almacenan. En lugar de mostrar
+              "HP: 0, Ataque: 0..." (datos falsos), se indica que no están disponibles.
+            */
+            <div className="px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm text-white/40 text-center">
+              Stats no disponibles para esta carta
+            </div>
+          )}
 
           {card.abilities.length > 0 && (
             <div>
@@ -149,21 +175,33 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
               <div className="space-y-2">
                 <PayPalButtons
                   style={{ layout: 'horizontal', shape: 'rect', label: 'paypal', color: 'gold', height: 45, tagline: false }}
-                  fundingSource={'paypal' as any}
+                  fundingSource="paypal"
                   forceReRender={[card.pokemonId, card.marketPrice]}
                   createOrder={async () => {
                     try {
                       const r = await createOrder(card.pokemonId);
                       return r.paypalOrderId;
-                    } catch (err: any) {
-                      toast.error(err.uiMessage || 'No se pudo crear la orden');
+                    } catch (err: unknown) {
+                      toast.error(getUiMessage(err, 'No se pudo crear la orden'));
                       throw err;
                     }
                   }}
                   onApprove={async (data) => {
+                    /*
+                      BUG FIX: `data.orderID` puede ser undefined según los tipos
+                      de @paypal/react-paypal-js. El non-null assertion `data.orderID!`
+                      causaba un error de runtime si PayPal devolvía una respuesta
+                      inesperada. Se usa el operador nullish coalescing como fallback seguro.
+                    */
+                    const orderId = data.orderID ?? '';
+                    if (!orderId) {
+                      toast.error('No se recibió el ID de orden de PayPal');
+                      return;
+                    }
+
                     setProcessing(true);
                     try {
-                      const res = await captureOrder(data.orderID!);
+                      const res = await captureOrder(orderId);
                       if (res.alreadyCaptured && res.userCard) {
                         add(res.userCard);
                         toast.success('Esta orden ya estaba capturada — carta confirmada en tu colección');
@@ -177,8 +215,8 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
                       } else {
                         toast.error('El pago no se completó');
                       }
-                    } catch (err: any) {
-                      toast.error(err.uiMessage || 'La compra falló');
+                    } catch (err: unknown) {
+                      toast.error(getUiMessage(err, 'La compra falló'));
                     } finally {
                       setProcessing(false);
                     }
@@ -220,7 +258,7 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
 
 function StatBox({
   icon: Icon, label, value, color,
-}: { icon: any; label: string; value: number; color: string }) {
+}: { icon: LucideIcon; label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
       <Icon size={18} className={color} />

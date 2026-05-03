@@ -6,6 +6,7 @@ import { CardsModule } from './cards/cards.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CollectionModule } from './collection/collection.module';
 import { UsersModule } from './users/users.module';
+import { BoosterModule } from './booster/booster.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -17,6 +18,7 @@ import { HealthController } from './health.controller';
     CardsModule,
     PaymentsModule,
     CollectionModule,
+    BoosterModule, // ← migrado desde express-api
   ],
   controllers: [HealthController],
 })

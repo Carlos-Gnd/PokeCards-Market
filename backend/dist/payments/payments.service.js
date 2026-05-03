@@ -1,43 +1,10 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -45,7 +12,6 @@ var PaymentsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentsService = void 0;
 const common_1 = require("@nestjs/common");
-const paypal = __importStar(require("@paypal/checkout-server-sdk"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const cards_service_1 = require("../cards/cards.service");
 const paypal_client_1 = require("./paypal.client");
@@ -68,49 +34,26 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             throw new common_1.ConflictException('Ya posees esta carta en tu colección');
         }
         const amount = Number(card.marketPrice).toFixed(2);
-        const request = new paypal.orders.OrdersCreateRequest();
-        request.prefer('return=representation');
-        request.requestBody({
-            intent: 'CAPTURE',
-            purchase_units: [
-                {
-                    reference_id: `arcadium_${card.pokemonId}`,
-                    description: `ARCADIUM · ${card.name} (${card.rarity}/${card.variant})`,
-                    custom_id: `${userId}:${card.id}`,
-                    amount: {
-                        currency_code: 'USD',
-                        value: amount,
-                    },
-                },
-            ],
-            application_context: {
-                brand_name: 'ARCADIUM',
-                user_action: 'PAY_NOW',
-                shipping_preference: 'NO_SHIPPING',
-            },
-        });
-        let response;
+        let orderCreated;
         try {
-            response = await this.paypal.http.execute(request);
+            orderCreated = await this.paypal.createOrder(Number(amount), `arcadium_${card.pokemonId}`, `ARCADIUM · ${card.name} (${card.rarity}/${card.variant})`);
         }
         catch (err) {
-            this.logger.error(`PayPal create-order falló: ${err.message}`);
+            this.logger.error(`PayPal create-order falló: ${err instanceof Error ? err.message : err}`);
             throw new common_1.BadRequestException('No se pudo crear la orden de PayPal');
         }
-        const paypalOrderId = response.result.id;
-        const approve = (response.result.links ?? []).find((l) => l.rel === 'approve');
         await this.prisma.order.create({
             data: {
                 userId,
                 cardId: card.id,
-                paypalOrderId,
+                paypalOrderId: orderCreated.id,
                 status: 'CREATED',
                 amount: card.marketPrice,
             },
         });
         return {
-            paypalOrderId,
-            approveUrl: approve?.href,
+            paypalOrderId: orderCreated.id,
+            approveUrl: orderCreated.approveUrl,
             amount,
             card: {
                 id: Number(card.id),
@@ -121,8 +64,30 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             },
         };
     }
+    toPublicUserCard(userCard) {
+        return {
+            id: userCard.id,
+            quantity: userCard.quantity,
+            obtainedFrom: userCard.obtainedFrom,
+            acquiredAt: userCard.createdAt,
+            cardId: Number(userCard.cardId),
+            card: {
+                id: Number(userCard.card.id),
+                pokemonId: userCard.card.pokemonId,
+                name: userCard.card.name,
+                type: userCard.card.type,
+                secondaryType: userCard.card.secondaryType,
+                rarity: userCard.card.rarity,
+                variant: userCard.card.variant,
+                imageUrl: userCard.card.imageUrl,
+                marketPrice: Number(userCard.card.marketPrice),
+            },
+        };
+    }
     async captureOrder(userId, paypalOrderId) {
-        const order = await this.prisma.order.findUnique({ where: { paypalOrderId } });
+        const order = await this.prisma.order.findUnique({
+            where: { paypalOrderId },
+        });
         if (!order)
             throw new common_1.NotFoundException('Orden no registrada');
         if (order.userId !== userId) {
@@ -133,35 +98,37 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 where: { userId_cardId: { userId, cardId: order.cardId } },
                 include: { card: true },
             });
-            return { alreadyCaptured: true, userCard };
+            return {
+                alreadyCaptured: true,
+                userCard: userCard ? this.toPublicUserCard(userCard) : null,
+            };
         }
-        const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
-        request.requestBody({});
-        let response;
+        let captureStatus;
+        let capturedAmount;
         try {
-            response = await this.paypal.http.execute(request);
+            const result = await this.paypal.captureOrder(paypalOrderId);
+            captureStatus = result.status;
+            capturedAmount = result.capturedAmount;
         }
         catch (err) {
-            this.logger.error(`PayPal capture-order falló: ${err.message}`);
+            this.logger.error(`PayPal capture-order falló: ${err instanceof Error ? err.message : err}`);
             await this.prisma.order.update({
                 where: { paypalOrderId },
                 data: { status: 'FAILED' },
             });
             throw new common_1.BadRequestException('La captura del pago falló en PayPal');
         }
-        const status = response.result.status;
-        if (status !== 'COMPLETED') {
+        if (captureStatus !== 'COMPLETED') {
             await this.prisma.order.update({
                 where: { paypalOrderId },
-                data: { status: status || 'FAILED' },
+                data: { status: captureStatus || 'FAILED' },
             });
-            throw new common_1.BadRequestException(`Pago no completado (estado: ${status})`);
+            throw new common_1.BadRequestException(`Pago no completado (estado: ${captureStatus})`);
         }
-        const capture = response.result.purchase_units?.[0]?.payments?.captures?.[0];
-        const capturedAmount = Number(capture?.amount?.value ?? 0);
-        if (Math.abs(capturedAmount - Number(order.amount)) > 0.01) {
-            this.logger.warn(`Monto capturado (${capturedAmount}) ≠ orden (${order.amount})`);
-            throw new common_1.BadRequestException('El monto capturado no coincide');
+        if (capturedAmount !== null &&
+            Math.abs(capturedAmount - Number(order.amount)) > 0.01) {
+            this.logger.warn(`Monto capturado (${capturedAmount}) ≠ orden (${order.amount}) para ${paypalOrderId}`);
+            throw new common_1.BadRequestException('El monto capturado no coincide con la orden');
         }
         const result = await this.prisma.$transaction(async (tx) => {
             const updatedOrder = await tx.order.update({
@@ -185,12 +152,19 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             const cartaPokemonId = `sv3pt5-${userCard.card.pokemonId}`;
             await tx.$executeRaw `
         INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
-        SELECT ${userId}::varchar, ${cartaPokemonId}::varchar, ${paypalOrderId}::varchar, 'marketplace'
-        WHERE EXISTS (SELECT 1 FROM cartas_pokemon WHERE id = ${cartaPokemonId})
-          AND NOT EXISTS (
-            SELECT 1 FROM colecciones_usuario
-            WHERE user_id = ${userId}::varchar AND paypal_order_id = ${paypalOrderId}::varchar
-          )
+        SELECT
+          ${userId}::varchar,
+          ${cartaPokemonId}::varchar,
+          ${paypalOrderId}::varchar,
+          'marketplace'
+        WHERE EXISTS (
+          SELECT 1 FROM cartas_pokemon WHERE id = ${cartaPokemonId}
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM colecciones_usuario
+          WHERE user_id = ${userId}::varchar
+            AND paypal_order_id = ${paypalOrderId}::varchar
+        )
       `;
             return { updatedOrder, userCard };
         });
@@ -198,15 +172,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             success: true,
             paypalOrderId,
             amount: Number(order.amount),
-            userCard: {
-                ...result.userCard,
-                cardId: Number(result.userCard.cardId),
-                card: {
-                    ...result.userCard.card,
-                    id: Number(result.userCard.card.id),
-                    marketPrice: Number(result.userCard.card.marketPrice),
-                },
-            },
+            userCard: this.toPublicUserCard(result.userCard),
         };
     }
     async history(userId) {
@@ -216,10 +182,23 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             include: { card: true },
         });
         return orders.map((o) => ({
-            ...o,
-            cardId: Number(o.cardId),
+            id: o.id,
+            paypalOrderId: o.paypalOrderId,
+            status: o.status,
             amount: Number(o.amount),
-            card: { ...o.card, id: Number(o.card.id), marketPrice: Number(o.card.marketPrice) },
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
+            cardId: Number(o.cardId),
+            card: {
+                id: Number(o.card.id),
+                pokemonId: o.card.pokemonId,
+                name: o.card.name,
+                type: o.card.type,
+                rarity: o.card.rarity,
+                variant: o.card.variant,
+                imageUrl: o.card.imageUrl,
+                marketPrice: Number(o.card.marketPrice),
+            },
         }));
     }
 };

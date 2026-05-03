@@ -1,7 +1,8 @@
-import { memo, type CSSProperties } from 'react';
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { useTilt3D } from './hooks/useTilt3D';
 import { getTheme } from './rarity-themes';
+import { getVariantVisualStyle } from './variant-visuals';
 import { AmbientGlow } from './layers/AmbientGlow';
 import { RaysLayer } from './layers/RaysLayer';
 import { FoilLayer } from './layers/FoilLayer';
@@ -17,23 +18,25 @@ import type { ArcadiumCard } from '../../types';
 
 export interface CardProps {
   card: ArcadiumCard;
-  /** Si la carta ya pertenece al usuario. */
   owned?: boolean;
-  /** Tamaño visual (afecta dimensiones absolutas, no escala el contenido). */
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  /** Click handler para abrir detalle. */
   onClick?: () => void;
-  /** Pasar `false` para desactivar el tilt 3D (e.g. dentro de modales). */
   enableTilt?: boolean;
-  /** Render más barato para listados con muchas cartas. */
   lightweight?: boolean;
+  /**
+   * BUG FIX: Se eliminó el modo 'static' de shineMode porque el div
+   * arc-static-card-shine generaba un sweep de color visible que cubría
+   * media carta al rotar con el tilt 3D. El único modo válido es 'reactive'
+   * (gradiente puntual que sigue al cursor) o 'none' para desactivarlo.
+   */
+  shineMode?: 'reactive' | 'none';
 }
 
 const SIZE_DIMS: Record<NonNullable<CardProps['size']>, { w: string; aspect: string }> = {
-  sm: { w: 'w-full max-w-[170px]', aspect: 'aspect-[5/7]' },
-  md: { w: 'w-full max-w-[220px]', aspect: 'aspect-[5/7]' },
-  lg: { w: 'w-full max-w-[300px]', aspect: 'aspect-[5/7]' },
-  xl: { w: 'w-full max-w-[440px]', aspect: 'aspect-[5/7]' },
+  sm: { w: 'w-full', aspect: 'aspect-[5/7]' },
+  md: { w: 'w-full', aspect: 'aspect-[5/7]' },
+  lg: { w: 'w-full', aspect: 'aspect-[5/7]' },
+  xl: { w: 'w-full', aspect: 'aspect-[5/7]' },
 };
 
 /**
@@ -44,17 +47,29 @@ const SIZE_DIMS: Record<NonNullable<CardProps['size']>, { w: string; aspect: str
  *   z-1:  RaysLayer (rayos de energía)
  *   z-2:  FoilLayer (foil multicolor)
  *   z-3:  HoloLayer (holográfico iridiscente)
- *   z-4:  ShimmerLayer (sweep horizontal)
- *   z-5:  CardArtwork (la imagen)
+ *   z-4:  ShimmerLayer (sweep horizontal sutil)
+ *   z-5:  CardArtwork (la imagen — ahora flex-[3])
  *   z-6:  ParticlesLayer (chispas decorativas)
  *   z-7:  Badges + Metadata (UI textual)
- *   z-8:  ShineLayer (gloss del cursor)
+ *   z-8:  ShineLayer (gloss puntual del cursor — solo 'reactive')
  *
- * Tilt 3D y shine se manejan con motion values (no React state)
- * para evitar re-renders durante el movimiento del cursor.
+ * ELIMINADOS:
+ *   - arc-luminous-foil: generaba sweep de color azul-cyan por toda la carta
+ *   - arc-static-card-shine: sweep blanco animado que cubría medio card
+ *   Ambos causaban el efecto visual "de color que cubre la mitad de la carta
+ *   y va rotando" que el usuario reportó.
  */
-function CardImpl({ card, owned, size = 'md', onClick, enableTilt = true, lightweight = false }: CardProps) {
+function CardImpl({
+  card,
+  owned,
+  size = 'md',
+  onClick,
+  enableTilt = true,
+  lightweight = false,
+  shineMode = 'reactive',
+}: CardProps) {
   const theme = getTheme(card.rarity);
+  const variantStyle = getVariantVisualStyle(card.variant);
   const dim = SIZE_DIMS[size];
   const tiltEnabled = enableTilt && !lightweight;
   const tilt = useTilt3D({
@@ -64,51 +79,47 @@ function CardImpl({ card, owned, size = 'md', onClick, enableTilt = true, lightw
     disableOnTouch: true,
     disabled: !tiltEnabled,
   });
+  const { ref: tiltRef, motion: tiltMotion } = tilt;
 
   const isVaulted = card.variant === 'vaulted' && !lightweight;
   const isSignature = card.variant === 'signature';
   const isPrestige = card.variant === 'prestige';
 
-  // Variant overrides — Luminous = boost ambient brightness; Spectrum = forces foil rainbow
-  const variantOverlay: CSSProperties = {};
-  if (card.variant === 'luminous') {
-    variantOverlay.background = `radial-gradient(circle at 50% 0%, ${theme.accentColor}30 0%, transparent 60%)`;
-  }
+  const frameBorder = variantStyle?.frameBorder ?? theme.frameBorder;
+  const frameBackground = variantStyle?.innerOverlay
+    ? `${variantStyle.innerOverlay}, ${theme.frameBg}`
+    : theme.frameBg;
+  const frameShadow = lightweight
+    ? theme.cardShadow
+    : [theme.cardShadow, theme.glowShadow, variantStyle?.glowShadow].filter(Boolean).join(', ');
 
   const inner = (
     <motion.div
-      ref={tilt.ref}
+      ref={tiltRef}
       onClick={onClick}
-      whileHover={tiltEnabled ? { translateY: -theme.hoverLift } : undefined}
-      transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+      whileHover={onClick ? { y: -4, scale: 1.03 } : undefined}
+      transition={{ type: 'spring', stiffness: 260, damping: 24, mass: 0.5 }}
       className={`group relative ${dim.w} ${dim.aspect} cursor-pointer select-none`}
       style={{ perspective: 1100, transformStyle: 'preserve-3d' }}
     >
-      {/* AmbientGlow vive fuera del frame para no clipear */}
-      {!lightweight && <AmbientGlow theme={theme} hoverGlow={tilt.motion.glowOpacity} />}
+      {!lightweight && <AmbientGlow theme={theme} hoverGlow={tiltMotion.glowOpacity} />}
 
-      {/* Frame + capas internas */}
       <motion.div
         className="absolute inset-0 rounded-2xl overflow-hidden"
         style={{
-          rotateX: tiltEnabled ? tilt.motion.rotateX : 0,
-          rotateY: tiltEnabled ? tilt.motion.rotateY : 0,
+          rotateX: tiltEnabled ? tiltMotion.rotateX : 0,
+          rotateY: tiltEnabled ? tiltMotion.rotateY : 0,
           transformStyle: 'preserve-3d',
           willChange: 'transform',
-          background: theme.frameBorder,
+          background: frameBorder,
           padding: '2px',
-          boxShadow: lightweight ? theme.cardShadow : `${theme.cardShadow}, ${theme.glowShadow}`,
+          boxShadow: frameShadow,
         }}
       >
-        {/* Cuerpo interno (separado del borde gradient) */}
         <div
-          className="relative w-full h-full rounded-[14px] overflow-hidden flex flex-col p-2.5"
-          style={{
-            background: theme.frameBg,
-            ...variantOverlay,
-          }}
+          className="relative w-full h-full rounded-[14px] overflow-hidden flex flex-col p-2"
+          style={{ background: frameBackground }}
         >
-          {/* Owned ring */}
           {owned && (
             <div
               aria-hidden
@@ -117,7 +128,6 @@ function CardImpl({ card, owned, size = 'md', onClick, enableTilt = true, lightw
             />
           )}
 
-          {/* Capas decorativas */}
           {!lightweight && (
             <>
               <RaysLayer theme={theme} />
@@ -127,24 +137,35 @@ function CardImpl({ card, owned, size = 'md', onClick, enableTilt = true, lightw
             </>
           )}
 
-          {/* UI superior: badges */}
+          {/*
+            BUG FIX: Se eliminó el div arc-luminous-foil que existía aquí.
+            Ese div con su pseudo-elemento ::after generaba un sweep de color
+            azul-cyan animado (arc-luminous-sheen) que barrería de lado a lado
+            cubriendo visualmente media carta. Era el efecto "de color que
+            cubre la mitad de la carta" que reportó el usuario.
+
+            La variante luminous queda representada únicamente por:
+            - Su frameBorder blanco-cyan (de variant-visuals.ts)
+            - Su innerOverlay sutil (radial-gradient muy transparente)
+            - Su glowShadow cian externo
+            Estos tres efectos juntos ya comunican la variante sin arruinar
+            la legibilidad de la ilustración.
+          */}
+
           <CardBadges theme={theme} variant={card.variant} ownedBadge={owned} />
 
-          {/* Artwork central con parallax */}
           <CardArtwork
             imageUrl={card.imageUrl}
             name={card.name}
             pokemonId={card.pokemonId}
             theme={theme}
-            parallaxX={tilt.motion.parallaxX}
-            parallaxY={tilt.motion.parallaxY}
+            parallaxX={tiltMotion.parallaxX}
+            parallaxY={tiltMotion.parallaxY}
             signature={isSignature || isPrestige}
           />
 
-          {/* Particles flotando sobre el artwork */}
           {!lightweight && <ParticlesLayer theme={theme} seed={card.pokemonId} />}
 
-          {/* UI inferior: nombre, tipo, precio */}
           <CardMetadata
             name={card.name}
             pokemonId={card.pokemonId}
@@ -156,12 +177,20 @@ function CardImpl({ card, owned, size = 'md', onClick, enableTilt = true, lightw
             compact={size === 'sm'}
           />
 
-          {/* Shine reactivo al cursor (capa más alta) */}
-          {tiltEnabled && (
+          {/*
+            BUG FIX: Se eliminó el modo 'static' que renderizaba arc-static-card-shine.
+            Ese div + ::after producía otro sweep blanco que, al combinarse con el
+            tilt 3D, aparecía como "un efecto de color que va rotando" cubriendo
+            la mitad de la carta.
+
+            Solo se mantiene el modo 'reactive' (ShineLayer) que es un punto de
+            brillo puntual y sutil que sigue al cursor sin barrer la carta.
+          */}
+          {tiltEnabled && shineMode === 'reactive' && (
             <ShineLayer
-              shineX={tilt.motion.shineX}
-              shineY={tilt.motion.shineY}
-              opacity={tilt.motion.shineOpacity}
+              shineX={tiltMotion.shineX}
+              shineY={tiltMotion.shineY}
+              opacity={tiltMotion.shineOpacity}
             />
           )}
         </div>
