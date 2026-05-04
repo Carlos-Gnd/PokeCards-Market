@@ -2,7 +2,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PokeapiService, PokeCard } from './pokeapi.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CardsService {
@@ -73,11 +72,9 @@ export class CardsService {
 
   // ── NUEVO: trending (8 cartas de mayor precio) ────────────────────────────
   async listTrending(): Promise<PokeCard[]> {
-    const cards = await this.prisma.card.findMany({
-      orderBy: { marketPrice: 'desc' },
-      take: 8,
-    });
-    return cards.map((c) => this.poke.rowToPokeCard(c));
+    const allCards = await this.poke.getCatalog();
+    const sorted = [...allCards].sort((a, b) => b.marketPrice - a.marketPrice);
+    return sorted.slice(0, 8);
   }
 
   // ── Sin cambios desde aquí ────────────────────────────────────────────────

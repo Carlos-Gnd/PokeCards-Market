@@ -1,6 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { PokeapiService, PokeCard } from './pokeapi.service';
-import { Prisma } from '@prisma/client';
 export declare class CardsService {
     private readonly poke;
     private readonly prisma;
@@ -24,17 +23,17 @@ export declare class CardsService {
     getOne(tcgId: string): Promise<PokeCard>;
     ensureInDb(tcgId: string): Promise<{
         id: bigint;
-        tcgId: string | null;
-        pokemonId: number;
-        name: string;
-        type: string;
-        secondaryType: string | null;
-        rarity: string;
-        variant: string;
-        imageUrl: string;
-        marketPrice: Prisma.Decimal;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        rarity: string;
+        type: string;
+        tcgId: string | null;
+        pokemonId: number;
+        secondaryType: string | null;
+        variant: string;
+        imageUrl: string;
+        marketPrice: import("@prisma/client/runtime/library").Decimal;
     }>;
     toPublic(card: PokeCard): PokeCard;
 }

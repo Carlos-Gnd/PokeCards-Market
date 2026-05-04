@@ -61,11 +61,9 @@ let CardsService = class CardsService {
         };
     }
     async listTrending() {
-        const cards = await this.prisma.card.findMany({
-            orderBy: { marketPrice: 'desc' },
-            take: 8,
-        });
-        return cards.map((c) => this.poke.rowToPokeCard(c));
+        const allCards = await this.poke.getCatalog();
+        const sorted = [...allCards].sort((a, b) => b.marketPrice - a.marketPrice);
+        return sorted.slice(0, 8);
     }
     async listAll() {
         return this.poke.getCatalog();

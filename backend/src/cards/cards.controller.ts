@@ -2,7 +2,6 @@
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
 import { CardsService } from './cards.service';
 
-// Solo los filtros opcionales — sin page ni limit (esos son números, se parsean aparte)
 export interface CardListQuery {
   rarity?: string;
   type?: string;
@@ -19,12 +18,22 @@ export class CardsController {
   async list(
     @Query('page') rawPage: string = '1',
     @Query('limit') rawLimit: string = '48',
-    @Query() q: CardListQuery,
+    @Query('rarity') rarity?: string,
+    @Query('type') type?: string,
+    @Query('search') search?: string,
+    @Query('sort') sort?: string,
   ) {
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const limit = Math.min(96, Math.max(12, parseInt(rawLimit, 10) || 48));
-    // Pasamos page y limit como números — ya no hay conflicto de tipos
-    return this.cards.listPaginated({ page, limit, ...q });
+
+    return this.cards.listPaginated({
+      page,
+      limit,
+      rarity,
+      type,
+      search,
+      sort,
+    });
   }
 
   @Get('trending')

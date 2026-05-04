@@ -8,7 +8,7 @@ export interface CardListQuery {
 export declare class CardsController {
     private readonly cards;
     constructor(cards: CardsService);
-    list(rawPage: string | undefined, rawLimit: string | undefined, q: CardListQuery): Promise<{
+    list(rawPage?: string, rawLimit?: string, rarity?: string, type?: string, search?: string, sort?: string): Promise<{
         count: number;
         page: number;
         limit: number;

@@ -20,10 +20,17 @@ let CardsController = class CardsController {
     constructor(cards) {
         this.cards = cards;
     }
-    async list(rawPage = '1', rawLimit = '48', q) {
+    async list(rawPage = '1', rawLimit = '48', rarity, type, search, sort) {
         const page = Math.max(1, parseInt(rawPage, 10) || 1);
         const limit = Math.min(96, Math.max(12, parseInt(rawLimit, 10) || 48));
-        return this.cards.listPaginated({ page, limit, ...q });
+        return this.cards.listPaginated({
+            page,
+            limit,
+            rarity,
+            type,
+            search,
+            sort,
+        });
     }
     async trending() {
         const cards = await this.cards.listTrending();
@@ -39,9 +46,12 @@ __decorate([
     (0, common_1.Header)('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('rarity')),
+    __param(3, (0, common_1.Query)('type')),
+    __param(4, (0, common_1.Query)('search')),
+    __param(5, (0, common_1.Query)('sort')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], CardsController.prototype, "list", null);
 __decorate([
