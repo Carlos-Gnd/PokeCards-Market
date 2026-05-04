@@ -13,8 +13,8 @@ const paypalOptions: ReactPayPalScriptOptions = {
   intent: 'capture',
   components: 'buttons',
   // Habilitar PayPal y tarjeta; deshabilitar alternativas no soportadas en sandbox
-  'disable-funding': 'credit,paylater,venmo,sepa,bancontact',
-  'enable-funding': 'paypal,card',
+  'disable-funding': 'card,credit,paylater,venmo,sepa,bancontact',
+  'enable-funding': 'paypal',
 };
 
 createRoot(document.getElementById('root')!).render(
