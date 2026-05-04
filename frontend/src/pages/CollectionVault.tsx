@@ -1,6 +1,6 @@
 // CollectionVaultPage.tsx - Página de bóveda de colección del usuario
 
-import { useEffect, useMemo, useState, lazy, Suspense, useCallback, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { Library, Sparkles, TrendingUp } from 'lucide-react';
 import { useCollectionStore } from '../store/collectionStore';
@@ -8,7 +8,6 @@ import { Card } from '../components/card';
 import { FullscreenLoader } from '../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import { cn, formatPrice } from '../lib/utils';
-import { fetchCatalogAll } from '../services/cards.service';
 import type { ArcadiumCard } from '../types';
 
 const CardDetailModal = lazy(() =>
@@ -21,46 +20,30 @@ const RARITY_ORDER: Record<string, number> = {
   eternal: 7, ascendant: 6, apex: 5, elite: 4, prime: 3, alloy: 2, core: 1,
 };
 
+ /* Replica exactamente la función det01 del backend (PokeapiService.mapRow). */
+function det01(seed: number): number {
+  let t = (seed + 0x6d2b79f5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+function calcStats(pokemonId: number): { hp: number; attack: number; defense: number; speed: number } {
+  const seed = pokemonId || 1;
+  return {
+    hp:      50  + Math.floor(det01(seed * 7)  * 200),
+    attack:  40  + Math.floor(det01(seed * 11) * 130),
+    defense: 40  + Math.floor(det01(seed * 13) * 110),
+    speed:   30  + Math.floor(det01(seed * 17) * 130),
+  };
+}
+
 export function CollectionVaultPage() {
   const { items, loading, fetch } = useCollectionStore();
   const [tab, setTab] = useState<'all' | 'rare' | 'recent'>('all');
   const [selected, setSelected] = useState<ArcadiumCard | null>(null);
 
-  /*
-    FIX BUG 5 (Stats no disponibles):
-    CollectionVault construye ArcadiumCard con stats: { hp:0, attack:0, defense:0, speed:0 }
-    porque el endpoint de colección no devuelve stats de PokeAPI.
-    
-    Solución: cuando el usuario hace click en una carta de la colección,
-    buscamos en el catálogo completo (que sí tiene stats) por tcgId y usamos
-    esos datos para abrir el modal. Si no encontramos la carta en el catálogo
-    (caso edge), usamos los datos de la colección sin stats.
-    
-    El catálogo ya tiene cache en sessionStorage (fetchCatalogAll), así que
-    esta búsqueda es instantánea en la segunda visita.
-  */
-  const [catalogCache, setCatalogCache] = useState<Map<string, ArcadiumCard>>(new Map());
-
   useEffect(() => { fetch(); }, [fetch]);
-
-  // Pre-cargar catálogo en background para tener stats disponibles
-  useEffect(() => {
-    fetchCatalogAll()
-      .then((data) => {
-        const map = new Map<string, ArcadiumCard>();
-        data.forEach((c) => map.set(c.tcgId, c));
-        setCatalogCache(map);
-      })
-      .catch(() => {
-        // Si falla, se usa el fallback sin stats (comportamiento anterior)
-      });
-  }, []);
-
-  const handleCardClick = useCallback((card: ArcadiumCard) => {
-    // Intentar usar la versión con stats del catálogo
-    const catalogCard = catalogCache.get(card.tcgId);
-    setSelected(catalogCard ?? card);
-  }, [catalogCache]);
 
   const totalValue = useMemo(
     () => items.reduce((acc, e) => acc + e.card.marketPrice * e.quantity, 0),
@@ -89,7 +72,7 @@ export function CollectionVaultPage() {
         <p className="text-white/55">Cartas desbloqueadas tras pago verificado</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats de la bóveda */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <StatCard icon={Library} label="Cartas únicas" value={items.length.toString()} hint={`${items.reduce((a, e) => a + e.quantity, 0)} totales`} />
         <StatCard icon={TrendingUp} label="Valor de bóveda" value={formatPrice(totalValue)} hint="Suma de mercado" />
@@ -128,6 +111,7 @@ export function CollectionVaultPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6 lg:gap-y-8 pt-6">
             {filtered.map((entry, idx) => {
+              
               const card: ArcadiumCard = {
                 pokemonId: entry.card.pokemonId,
                 tcgId: entry.card.tcgId ?? `legacy-${entry.card.pokemonId}`,
@@ -139,8 +123,7 @@ export function CollectionVaultPage() {
                 variant: entry.card.variant,
                 imageUrl: entry.card.imageUrl,
                 marketPrice: entry.card.marketPrice,
-                // Stats vacíos — se sustituyen por los del catálogo en handleCardClick
-                stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
+                stats: calcStats(entry.card.pokemonId),
                 height: 0,
                 weight: 0,
                 abilities: [],
@@ -154,7 +137,7 @@ export function CollectionVaultPage() {
                   transition={{ duration: 0.3, delay: Math.min(idx * 0.03, 0.4) }}
                   className="relative w-full max-w-[170px] sm:max-w-[200px] xl:max-w-[220px] justify-self-center"
                 >
-                  <Card card={card} owned onClick={() => handleCardClick(card)} size="sm" />
+                  <Card card={card} owned onClick={() => setSelected(card)} size="sm" />
                   {entry.quantity > 1 && (
                     <span className="absolute -top-2 -right-2 z-30 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-primary text-white border border-white/20 shadow-lg">
                       x{entry.quantity}

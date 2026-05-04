@@ -3,17 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import "../../styles/booster.css";
 
-/**
- * FUSIÓN DE BACKENDS:
- * Antes apuntaba a VITE_BOOSTER_API_URL (puerto 3001, express-api).
- * Ahora usa VITE_API_URL (puerto 3000, NestJS) porque los endpoints
- * del booster fueron migrados al módulo BoosterModule de NestJS.
- *
- * Cambios de rutas:
- *   GET  /api/booster-pack              → GET  /api/booster/demo
- *   POST /api/booster-pack/create-order → POST /api/booster/create-order
- *   POST /api/booster-pack/capture-order → POST /api/booster/capture-order
- */
 const API_URL = import.meta.env.VITE_API_URL || "";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
@@ -51,12 +40,151 @@ function rarityBadgeClass(rareza) {
   }
 }
 
+/**
+ * Replica la función determinista del backend (PokeapiService.mapRow).
+ * El backend genera stats con det01(seed * N), donde seed = pokemonId.
+ * Como el frontend tiene pokemonId en BoosterCard.pokedexNumero, podemos
+ * calcular exactamente los mismos valores sin llamada extra al servidor.
+ */
+function det01(seed) {
+  let t = (seed + 0x6d2b79f5) >>> 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+function calcStats(pokedexNumero) {
+  const seed = pokedexNumero || 1;
+  return {
+    hp: 50 + Math.floor(det01(seed * 7) * 200),
+    attack: 40 + Math.floor(det01(seed * 11) * 130),
+    defense: 40 + Math.floor(det01(seed * 13) * 110),
+    speed: 30 + Math.floor(det01(seed * 17) * 130),
+  };
+}
+
+// ── Modal de visualización en grande ─────────────────────────────────────────
+function CardZoomModal({ card, onClose }) {
+  if (!card) return null;
+  const stats = calcStats(card.pokedexNumero);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+      <motion.div
+        initial={{ scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 220, damping: 20 }}
+        className="relative z-10 flex flex-col sm:flex-row items-center gap-6 max-w-2xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Imagen grande */}
+        <div className="relative flex-shrink-0">
+          {card.imagenLarge ? (
+            <img
+              src={card.imagenLarge}
+              alt={card.nombre}
+              className="w-64 sm:w-72 rounded-2xl shadow-2xl"
+              style={{
+                boxShadow: isHighRarity(card)
+                  ? "0 0 60px rgba(109,94,248,0.5), 0 20px 50px rgba(0,0,0,0.6)"
+                  : "0 20px 50px rgba(0,0,0,0.6)",
+              }}
+            />
+          ) : (
+            <div className="w-64 sm:w-72 aspect-[245/342] rounded-2xl bg-surface-2 bp-card-skeleton" />
+          )}
+        </div>
+
+        {/* Datos de la carta */}
+        <div className="flex-1 space-y-3">
+          <div>
+            <p className="font-display font-black text-2xl text-white leading-tight">
+              {card.nombre}
+            </p>
+            {card.tipo && (
+              <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-md bg-white/10 border border-white/20 text-white/70">
+                {card.tipo}
+              </span>
+            )}
+          </div>
+
+          {/* Rareza */}
+          <div
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium ${rarityBadgeClass(card.rareza)}`}
+          >
+            {card.rareza ?? "Sin clasificar"}
+          </div>
+
+          {/* Stats calculados igual que el backend */}
+          <div className="grid grid-cols-2 gap-2">
+            <StatRow label="HP" value={stats.hp} color="text-rose-400" />
+            <StatRow
+              label="Ataque"
+              value={stats.attack}
+              color="text-orange-400"
+            />
+            <StatRow
+              label="Defensa"
+              value={stats.defense}
+              color="text-blue-400"
+            />
+            <StatRow
+              label="Velocidad"
+              value={stats.speed}
+              color="text-emerald-400"
+            />
+          </div>
+
+          {/* Precio */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <span className="text-xs text-white/50 uppercase tracking-wider">
+              Precio de mercado
+            </span>
+            <span className="font-mono font-bold text-gold">
+              ${Number(card.precioMercado ?? 0).toFixed(2)}
+            </span>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full mt-2 px-4 py-2 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 hover:text-white text-sm transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function StatRow({ label, value, color }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+      <div className="flex-1">
+        <div className="text-[10px] uppercase tracking-wider text-white/45">
+          {label}
+        </div>
+        <div className={`font-mono font-bold text-sm ${color}`}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function BoosterPack({ userId = null }) {
   const [phase, setPhase] = useState("idle");
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState(new Set());
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  // estado para la carta que se ve en grande
+  const [zoomed, setZoomed] = useState(null);
 
   const beginReveal = useCallback((fetched) => {
     setCards(fetched);
@@ -128,6 +256,7 @@ export default function BoosterPack({ userId = null }) {
 
   const handleFlip = useCallback((id) => {
     setFlipped((prev) => {
+      // Si ya está volteada, no hacer nada (la carta no se puede des-voltear).
       if (prev.has(id)) return prev;
       const next = new Set(prev);
       next.add(id);
@@ -141,6 +270,7 @@ export default function BoosterPack({ userId = null }) {
     setFlipped(new Set());
     setError(null);
     setSuccess(null);
+    setZoomed(null);
   }, []);
 
   const flipAll = useCallback(() => {
@@ -280,6 +410,10 @@ export default function BoosterPack({ userId = null }) {
             exit={{ opacity: 0 }}
             className="flex flex-col items-center"
           >
+            <p className="text-xs text-white/45 mb-4 text-center">
+              Haz click en una carta para voltearla · Vuelve a hacer click para
+              verla en grande
+            </p>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
                 const high = isHighRarity(card);
@@ -299,31 +433,33 @@ export default function BoosterPack({ userId = null }) {
                   >
                     <div
                       className={`bp-flip-card ${isFlipped ? "is-flipped" : ""}`}
-                      onClick={() => handleFlip(card.id)}
-                      onMouseMove={(e) => {
-                        // Solo aplicar el efecto holo cuando la carta ya está volteada (frente visible)
-                        if (!isFlipped) return;
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const rawMx =
-                          ((e.clientX - rect.left) / rect.width) * 100;
-                        const my = ((e.clientY - rect.top) / rect.height) * 100;
-                        // El eje X está invertido porque la cara tiene rotateY(180deg)
-                        // → espejamos para que el holo vaya en la dirección correcta
-                        e.currentTarget.style.setProperty(
-                          "--bp-mx",
-                          `${100 - rawMx}%`,
-                        );
-                        e.currentTarget.style.setProperty("--bp-my", `${my}%`);
+                      onClick={() => {
+                        if (!isFlipped) {
+                          // Primera pulsación: voltear la carta
+                          handleFlip(card.id);
+                        } else {
+                          // Segunda pulsación: abrir vista en grande
+                          setZoomed(card);
+                        }
                       }}
+                      
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          handleFlip(card.id);
+                          if (!isFlipped) {
+                            handleFlip(card.id);
+                          } else {
+                            setZoomed(card);
+                          }
                         }
                       }}
-                      aria-label={`Voltear carta ${card.nombre}`}
+                      aria-label={
+                        isFlipped
+                          ? `Ver ${card.nombre} en grande`
+                          : `Voltear carta ${card.nombre}`
+                      }
                     >
                       <div className="bp-flip-face">
                         <div className="bp-card-back" />
@@ -345,6 +481,7 @@ export default function BoosterPack({ userId = null }) {
                         )}
                       </div>
                     </div>
+
                     {isFlipped && (
                       <motion.div
                         initial={{ opacity: 0, y: 4 }}
@@ -362,6 +499,10 @@ export default function BoosterPack({ userId = null }) {
                         >
                           {card.rareza ?? "Sin clasificar"}
                         </div>
+                        {/* hint para que el usuario sepa que puede hacer click */}
+                        <p className="text-[9px] text-white/35 mt-1">
+                          toca para ver en grande
+                        </p>
                       </motion.div>
                     )}
                   </motion.div>
@@ -382,6 +523,13 @@ export default function BoosterPack({ userId = null }) {
               </button>
             </div>
           </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de zoom de carta */}
+      <AnimatePresence>
+        {zoomed && (
+          <CardZoomModal card={zoomed} onClose={() => setZoomed(null)} />
         )}
       </AnimatePresence>
     </div>
