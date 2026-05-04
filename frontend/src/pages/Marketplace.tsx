@@ -67,8 +67,14 @@ function useColumnCount(): number {
   return cols;
 }
 
-// ── Altura estimada de cada fila del grid (card + gap) ───────────────────────
-const CARD_ROW_HEIGHT = 320; // px — ajusta si cambias el tamaño de Card
+// ── Altura estimada de cada fila del grid (card + gap vertical) ───────────────
+// FIX BUG 6 (grid pegado): El gap-y-7 de Tailwind equivale a 28px (7 * 4px).
+// El virtualizador usa posición absoluta y no suma los gaps del CSS,
+// por lo que la altura estimada DEBE incluir el gap para que las filas
+// no se solapen. 320px (carta) + 28px (gap) = 348px.
+const CARD_HEIGHT = 320;   // px — altura de la carta
+const ROW_GAP = 28;        // px — equivale a gap-y-7 (7 * 4 = 28)
+const CARD_ROW_HEIGHT = CARD_HEIGHT + ROW_GAP;
 
 export function MarketplacePage() {
   const { user } = useAuthStore();
@@ -188,6 +194,7 @@ export function MarketplacePage() {
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
+    // FIX BUG 6: estimateSize incluye el gap vertical para evitar solapamiento
     estimateSize: () => CARD_ROW_HEIGHT,
     overscan: 3, // pre-renderiza 3 filas arriba y abajo del viewport
   });
@@ -397,6 +404,13 @@ export function MarketplacePage() {
             El virtualizador solo monta en el DOM las filas visibles (~3-6).
             El div interior tiene la altura total del contenido para que la
             barra de scroll sea proporcional al número real de cartas.
+
+            FIX BUG 6: Cada fila tiene height: CARD_HEIGHT (320px) en lugar
+            de virtualRow.size (348px). El gap entre filas se obtiene sumando
+            paddingBottom = ROW_GAP al div de fila. De esta forma:
+            - El virtualizer calcula posiciones correctas con estimateSize=348px
+            - Cada fila ocupa 320px + 28px de padding-bottom = 348px reales
+            - No hay solapamiento ni espacio perdido
           */}
           <div
             ref={scrollRef}
@@ -415,15 +429,20 @@ export function MarketplacePage() {
                 return (
                   <div
                     key={virtualRow.key}
-                    className={`grid gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6`}
                     style={{
                       position: "absolute",
                       top: virtualRow.start,
                       left: 0,
                       width: "100%",
-                      height: virtualRow.size,
+                      // FIX: La fila tiene la altura de la carta, el gap
+                      // se añade como padding-bottom para que el próximo
+                      // virtualRow.start quede bien posicionado
+                      height: CARD_HEIGHT,
+                      paddingBottom: ROW_GAP,
+                      boxSizing: "content-box",
                       display: "grid",
                       gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                      gap: "0 1rem", // gap-x horizontal sí va en CSS (no afecta altura)
                     }}
                   >
                     {rowCards.map((card) => (

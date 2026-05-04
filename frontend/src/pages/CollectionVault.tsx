@@ -1,14 +1,14 @@
 // CollectionVaultPage.tsx - Página de bóveda de colección del usuario
 
-import { useEffect, useMemo, useState, lazy, Suspense, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense, useCallback, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { Library, Sparkles, TrendingUp } from 'lucide-react';
 import { useCollectionStore } from '../store/collectionStore';
 import { Card } from '../components/card';
-//import { CardDetailModal } from '../components/CardDetailModal';
 import { FullscreenLoader } from '../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import { cn, formatPrice } from '../lib/utils';
+import { fetchCatalogAll } from '../services/cards.service';
 import type { ArcadiumCard } from '../types';
 
 const CardDetailModal = lazy(() =>
@@ -26,7 +26,41 @@ export function CollectionVaultPage() {
   const [tab, setTab] = useState<'all' | 'rare' | 'recent'>('all');
   const [selected, setSelected] = useState<ArcadiumCard | null>(null);
 
+  /*
+    FIX BUG 5 (Stats no disponibles):
+    CollectionVault construye ArcadiumCard con stats: { hp:0, attack:0, defense:0, speed:0 }
+    porque el endpoint de colección no devuelve stats de PokeAPI.
+    
+    Solución: cuando el usuario hace click en una carta de la colección,
+    buscamos en el catálogo completo (que sí tiene stats) por tcgId y usamos
+    esos datos para abrir el modal. Si no encontramos la carta en el catálogo
+    (caso edge), usamos los datos de la colección sin stats.
+    
+    El catálogo ya tiene cache en sessionStorage (fetchCatalogAll), así que
+    esta búsqueda es instantánea en la segunda visita.
+  */
+  const [catalogCache, setCatalogCache] = useState<Map<string, ArcadiumCard>>(new Map());
+
   useEffect(() => { fetch(); }, [fetch]);
+
+  // Pre-cargar catálogo en background para tener stats disponibles
+  useEffect(() => {
+    fetchCatalogAll()
+      .then((data) => {
+        const map = new Map<string, ArcadiumCard>();
+        data.forEach((c) => map.set(c.tcgId, c));
+        setCatalogCache(map);
+      })
+      .catch(() => {
+        // Si falla, se usa el fallback sin stats (comportamiento anterior)
+      });
+  }, []);
+
+  const handleCardClick = useCallback((card: ArcadiumCard) => {
+    // Intentar usar la versión con stats del catálogo
+    const catalogCard = catalogCache.get(card.tcgId);
+    setSelected(catalogCard ?? card);
+  }, [catalogCache]);
 
   const totalValue = useMemo(
     () => items.reduce((acc, e) => acc + e.card.marketPrice * e.quantity, 0),
@@ -92,23 +126,8 @@ export function CollectionVaultPage() {
             ))}
           </div>
 
-          {/*
-            BUG FIX: El grid ahora usa max-w fijo por columna para que las cards
-            no se estiren en pantallas grandes y mantengan una lectura uniforme
-            tipo binder.
-          */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6 lg:gap-y-8 pt-6">
             {filtered.map((entry, idx) => {
-              /*
-                BUG FIX CRÍTICO: Antes se construía un ArcadiumCard falso con
-                stats hardcodeadas (hp:60, attack:0, etc.) y campos faltantes
-                (height:0, weight:0, abilities:[]).
-
-                UserCardEntry.card NO tiene stats/abilities/height/weight porque
-                viene del express-api que solo guarda datos de la carta TCG.
-                La solución correcta es construir el ArcadiumCard con valores
-                por defecto seguros y coherentes.
-              */
               const card: ArcadiumCard = {
                 pokemonId: entry.card.pokemonId,
                 tcgId: entry.card.tcgId ?? `legacy-${entry.card.pokemonId}`,
@@ -120,8 +139,7 @@ export function CollectionVaultPage() {
                 variant: entry.card.variant,
                 imageUrl: entry.card.imageUrl,
                 marketPrice: entry.card.marketPrice,
-                // Stats no disponibles desde la colección — se usan valores vacíos
-                // para no mostrar datos falsos en CardDetailModal
+                // Stats vacíos — se sustituyen por los del catálogo en handleCardClick
                 stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
                 height: 0,
                 weight: 0,
@@ -134,10 +152,9 @@ export function CollectionVaultPage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: Math.min(idx * 0.03, 0.4) }}
-                  // FIX: El contenedor define el ancho máximo, la Card usa w-full
                   className="relative w-full max-w-[170px] sm:max-w-[200px] xl:max-w-[220px] justify-self-center"
                 >
-                  <Card card={card} owned onClick={() => setSelected(card)} size="sm" />
+                  <Card card={card} owned onClick={() => handleCardClick(card)} size="sm" />
                   {entry.quantity > 1 && (
                     <span className="absolute -top-2 -right-2 z-30 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-primary text-white border border-white/20 shadow-lg">
                       x{entry.quantity}

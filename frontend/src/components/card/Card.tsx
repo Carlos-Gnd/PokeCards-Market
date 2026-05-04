@@ -33,22 +33,17 @@ const SIZE_DIMS: Record<NonNullable<CardProps['size']>, { w: string; aspect: str
 /**
  * `Card` — composer principal del sistema de cartas ARCADIUM.
  *
- * Arquitectura por capas (de fondo a frente):
- *   z-0:  AmbientGlow (halo detrás)
- *   z-1:  RaysLayer (rayos de energía)
- *   z-2:  FoilLayer (foil multicolor)
- *   z-3:  HoloLayer (holográfico iridiscente)
- *   z-4:  ShimmerLayer (sweep horizontal sutil)
- *   z-5:  CardArtwork (la imagen — ahora flex-[3])
- *   z-6:  ParticlesLayer (chispas decorativas)
- *   z-7:  Badges + Metadata (UI textual)
+ * BUG FIX (blur/desenfoque al hover):
+ *   El `whileHover={{ y: -4, scale: 1.03 }}` en el motion.div interno con
+ *   `overflow: hidden` forzaba al navegador a re-componer la carta en GPU en
+ *   cada frame del hover, produciendo un frame de anti-aliasing visible como
+ *   blur. También la clase `group` activaba el `drop-shadow` del contenedor
+ *   superior que combinado con el scale creaba el efecto desenfocado.
  *
- * ELIMINADOS:
- *   - ShineLayer (gloss puntual del cursor) — removido porque las props ya no existen
- *   - arc-luminous-foil: generaba sweep de color azul-cyan por toda la carta
- *   - arc-static-card-shine: sweep blanco animado que cubría medio card
- *   Ambos causaban el efecto visual "de color que cubre la mitad de la carta
- *   y va rotando" que el usuario reportó.
+ *   Solución: Se elimina el whileHover del motion.div interno y se mueve
+ *   la elevación a CSS puro con `transition` y `translateY` en el wrapper.
+ *   CSS transforms en el contenedor externo (sin overflow:hidden) no causan
+ *   re-composición del contenido interno.
  */
 function CardImpl({
   card,
@@ -83,100 +78,83 @@ function CardImpl({
     : [theme.cardShadow, theme.glowShadow, variantStyle?.glowShadow].filter(Boolean).join(', ');
 
   const inner = (
-    <motion.div
-      ref={tiltRef}
+    /*
+      FIX BUG (blur): Se usa un div wrapper con CSS hover en lugar de
+      whileHover de Framer Motion en el div con overflow:hidden.
+      La transición CSS en el contenedor EXTERNO (este div) no fuerza
+      re-composición del contenido, eliminando el blur.
+    */
+    <div
+      className={`group relative ${dim.w} ${dim.aspect} ${onClick ? 'card-hover-lift' : ''}`}
+      style={{ perspective: 1100 }}
       onClick={onClick}
-      whileHover={onClick ? { y: -4, scale: 1.03 } : undefined}
-      transition={{ type: 'spring', stiffness: 260, damping: 24, mass: 0.5 }}
-      className={`group relative ${dim.w} ${dim.aspect} cursor-pointer select-none`}
-      style={{ perspective: 1100, transformStyle: 'preserve-3d' }}
     >
       <motion.div
-        className="absolute inset-0 rounded-2xl overflow-hidden"
-        style={{
-          rotateX: tiltEnabled ? tiltMotion.rotateX : 0,
-          rotateY: tiltEnabled ? tiltMotion.rotateY : 0,
-          transformStyle: 'preserve-3d',
-          willChange: 'transform',
-          background: frameBorder,
-          padding: '2px',
-          boxShadow: frameShadow,
-        }}
+        ref={tiltRef}
+        className="absolute inset-0"
+        style={{ transformStyle: 'preserve-3d' }}
       >
-        <div
-          className="relative w-full h-full rounded-[14px] overflow-hidden flex flex-col p-2"
-          style={{ background: frameBackground }}
+        <motion.div
+          className="absolute inset-0 rounded-2xl overflow-hidden"
+          style={{
+            rotateX: tiltEnabled ? tiltMotion.rotateX : 0,
+            rotateY: tiltEnabled ? tiltMotion.rotateY : 0,
+            transformStyle: 'preserve-3d',
+            willChange: 'transform',
+            background: frameBorder,
+            padding: '2px',
+            boxShadow: frameShadow,
+          }}
         >
-          {owned && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-[14px] z-[9]"
-              style={{ boxShadow: 'inset 0 0 0 2px rgba(34,197,94,0.65)' }}
+          <div
+            className="relative w-full h-full rounded-[14px] overflow-hidden flex flex-col p-2"
+            style={{ background: frameBackground }}
+          >
+            {owned && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-[14px] z-[9]"
+                style={{ boxShadow: 'inset 0 0 0 2px rgba(34,197,94,0.65)' }}
+              />
+            )}
+
+            {!lightweight && (
+              <>
+                <RaysLayer theme={theme} />
+                <FoilLayer theme={theme} />
+                <HoloLayer theme={theme} />
+                <ShimmerLayer theme={theme} />
+              </>
+            )}
+
+            <CardBadges theme={theme} variant={card.variant} ownedBadge={owned} />
+
+            <CardArtwork
+              imageUrl={card.imageUrl}
+              name={card.name}
+              pokemonId={card.pokemonId}
+              theme={theme}
+              parallaxX={tiltMotion.parallaxX}
+              parallaxY={tiltMotion.parallaxY}
+              signature={isSignature || isPrestige}
             />
-          )}
 
-          {!lightweight && (
-            <>
-              <RaysLayer theme={theme} />
-              <FoilLayer theme={theme} />
-              <HoloLayer theme={theme} />
-              <ShimmerLayer theme={theme} />
-            </>
-          )}
+            {!lightweight && <ParticlesLayer theme={theme} seed={card.pokemonId} />}
 
-          {/*
-            BUG FIX: Se eliminó el div arc-luminous-foil que existía aquí.
-            Ese div con su pseudo-elemento ::after generaba un sweep de color
-            azul-cyan animado (arc-luminous-sheen) que barrería de lado a lado
-            cubriendo visualmente media carta. Era el efecto "de color que
-            cubre la mitad de la carta" que reportó el usuario.
-
-            La variante luminous queda representada únicamente por:
-            - Su frameBorder blanco-cyan (de variant-visuals.ts)
-            - Su innerOverlay sutil (radial-gradient muy transparente)
-            - Su glowShadow cian externo
-            Estos tres efectos juntos ya comunican la variante sin arruinar
-            la legibilidad de la ilustración.
-          */}
-
-          <CardBadges theme={theme} variant={card.variant} ownedBadge={owned} />
-
-          <CardArtwork
-            imageUrl={card.imageUrl}
-            name={card.name}
-            pokemonId={card.pokemonId}
-            theme={theme}
-            parallaxX={tiltMotion.parallaxX}
-            parallaxY={tiltMotion.parallaxY}
-            signature={isSignature || isPrestige}
-          />
-
-          {!lightweight && <ParticlesLayer theme={theme} seed={card.pokemonId} />}
-
-          <CardMetadata
-            name={card.name}
-            pokemonId={card.pokemonId}
-            type={card.type}
-            secondaryType={card.secondaryType}
-            hp={card.stats?.hp ?? 0}
-            price={card.marketPrice}
-            theme={theme}
-            compact={size === 'sm'}
-          />
-
-          {/*
-            BUG FIX: Se eliminó el modo 'static' que renderizaba arc-static-card-shine.
-            Ese div + ::after producía otro sweep blanco que, al combinarse con el
-            tilt 3D, aparecía como "un efecto de color que va rotando" cubriendo
-            la mitad de la carta.
-
-            Solo se mantiene el modo 'reactive' (ShineLayer) que es un punto de
-            brillo puntual y sutil que sigue al cursor sin barrer la carta.
-          */}
-          {/* ShineLayer removido porque las propiedades shineX, shineY, shineOpacity ya no existen en el hook */}
-        </div>
+            <CardMetadata
+              name={card.name}
+              pokemonId={card.pokemonId}
+              type={card.type}
+              secondaryType={card.secondaryType}
+              hp={card.stats?.hp ?? 0}
+              price={card.marketPrice}
+              theme={theme}
+              compact={size === 'sm'}
+            />
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 
   return isVaulted ? <SlabFrame grade="10">{inner}</SlabFrame> : inner;

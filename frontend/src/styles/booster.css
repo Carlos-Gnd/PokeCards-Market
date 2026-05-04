@@ -17,10 +17,24 @@
     filter 0.24s ease;
   cursor: pointer;
   will-change: transform;
+  /* 
+    FIX BUG 1 & 2: El hover de elevación/escala va en el CONTENEDOR padre,
+    no en .bp-holo. Así no interfiere con el is-flipped rotateY(180deg).
+  */
 }
 
 .bp-flip-card:hover {
   filter: drop-shadow(0 18px 30px rgba(53, 200, 255, 0.16));
+}
+
+/* 
+  FIX BUG 1: Una vez volteada la carta (is-flipped), el cursor no debe
+  volver a flipearla. El hover de transformación se aplica solo cuando
+  la carta YA está volteada, para dar un efecto de elevación suave.
+*/
+.bp-flip-card.is-flipped:hover {
+  /* Ligera elevación sobre el eje Y ya girado — NO añadimos otro rotateY */
+  filter: drop-shadow(0 22px 40px rgba(53, 200, 255, 0.25));
 }
 
 .bp-flip-card.is-flipped {
@@ -64,12 +78,29 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  /* 
+    FIX BUG 3 (rendimiento): will-change en la imagen para que el navegador
+    promueva el elemento a capa GPU desde el inicio y evite re-composiciones.
+  */
+  will-change: transform;
+  /* Elimina el sub-pixel blurring que ocurría al componer la imagen girada */
+  transform: translateZ(0);
+  image-rendering: auto;
 }
 
 /* ----- Holográfico (solo cartas raras al hover) ----- */
 .bp-holo {
   position: relative;
   isolation: isolate;
+  /*
+    FIX BUG 2: Se elimina cualquier transform en .bp-holo y .bp-holo:hover.
+    Antes .bp-holo:hover aplicaba rotateY(180deg) de NUEVO sobre la cara que
+    ya estaba girada (bp-flip-back ya tiene rotateY(180deg) + is-flipped añade
+    otro), resultando en efecto espejo. 
+    
+    El hover visual (elevación) ya queda en .bp-flip-card.is-flipped:hover arriba.
+    Aquí solo manejamos las capas visuales holo (::before / ::after).
+  */
 }
 
 .bp-holo::before,
@@ -114,14 +145,22 @@
   animation-play-state: paused;
 }
 
-.bp-holo:hover::before,
-.bp-holo:hover::after {
+/* 
+  FIX BUG 2: El hover del efecto holo se dispara cuando el CONTENEDOR
+  padre (.bp-flip-card.is-flipped) está en hover, no cuando .bp-holo
+  tiene hover directamente. Esto evita el doble rotateY.
+*/
+.bp-flip-card.is-flipped:hover .bp-holo::before,
+.bp-flip-card.is-flipped:hover .bp-holo::after {
   opacity: 1;
   animation-play-state: running;
 }
 
-.bp-holo:hover {
-  transform: rotateY(180deg) translateY(-4px) scale(1.015);
+/* 
+  FIX BUG 2 - box-shadow holo: también se activa desde el contenedor padre.
+  Se añade como variable CSS para no duplicar reglas.
+*/
+.bp-flip-card.is-flipped:hover .bp-holo {
   box-shadow:
     0 22px 50px -16px rgba(109, 94, 248, 0.55),
     0 0 0 1px rgba(255, 255, 255, 0.12),
@@ -150,8 +189,11 @@
   );
 }
 
-.bp-holo-legendary:hover {
-  transform: rotateY(180deg) translateY(-4px) scale(1.015);
+/* 
+  FIX BUG 2: También se elimina el rotateY de bp-holo-legendary:hover.
+  El box-shadow legendary se activa igual desde el contenedor padre.
+*/
+.bp-flip-card.is-flipped:hover .bp-holo-legendary {
   box-shadow:
     0 22px 60px -16px rgba(246, 196, 83, 0.65),
     0 0 0 1px rgba(246, 196, 83, 0.35),

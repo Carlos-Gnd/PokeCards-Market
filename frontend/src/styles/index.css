@@ -212,3 +212,13 @@
   .section-glow-purple { @apply absolute pointer-events-none rounded-full blur-[120px] bg-secondary/10; }
   .section-glow-cyan   { @apply absolute pointer-events-none rounded-full blur-[140px] bg-accent/8; }
 }
+
+.card-hover-lift {
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+ 
+.card-hover-lift:hover {
+  transform: translateY(-4px) scale(1.03);
+}
