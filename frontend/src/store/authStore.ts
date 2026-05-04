@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signUp: async (email, password, username) => {
     // Crea la cuenta vía backend (auto-confirma email)
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const apiUrl = import.meta.env.VITE_API_URL || '';
     const res = await fetch(`${apiUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
