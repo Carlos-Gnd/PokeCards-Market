@@ -20,13 +20,14 @@ let CardsController = class CardsController {
     constructor(cards) {
         this.cards = cards;
     }
-    async list() {
-        const cards = await this.cards.listAll();
-        return { count: cards.length, cards };
+    async list(rawPage = '1', rawLimit = '48', q) {
+        const page = Math.max(1, parseInt(rawPage, 10) || 1);
+        const limit = Math.min(96, Math.max(12, parseInt(rawLimit, 10) || 48));
+        return this.cards.listPaginated({ page, limit, ...q });
     }
     async trending() {
-        const cards = await this.cards.listAll();
-        return { cards: cards.slice(0, 8) };
+        const cards = await this.cards.listTrending();
+        return { cards };
     }
     async one(tcgId) {
         return this.cards.getOne(tcgId);
@@ -36,8 +37,11 @@ exports.CardsController = CardsController;
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.Header)('Cache-Control', 'public, max-age=60, stale-while-revalidate=300'),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], CardsController.prototype, "list", null);
 __decorate([

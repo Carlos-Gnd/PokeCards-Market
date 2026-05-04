@@ -44,6 +44,10 @@ model Card {
   orders        Order[]
 
   @@map("cards")
+  @@index([rarity])
+  @@index([type])
+  @@index([name])
+  @@index([marketPrice])
 }
 
 model Order {

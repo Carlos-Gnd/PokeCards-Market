@@ -1,13 +1,21 @@
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+// CollectionVaultPage.tsx - Página de bóveda de colección del usuario
+
+import { useEffect, useMemo, useState, lazy, Suspense, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { Library, Sparkles, TrendingUp } from 'lucide-react';
 import { useCollectionStore } from '../store/collectionStore';
 import { Card } from '../components/card';
-import { CardDetailModal } from '../components/CardDetailModal';
+//import { CardDetailModal } from '../components/CardDetailModal';
 import { FullscreenLoader } from '../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import { cn, formatPrice } from '../lib/utils';
 import type { ArcadiumCard } from '../types';
+
+const CardDetailModal = lazy(() =>
+  import("../components/CardDetailModal").then((module) => ({
+    default: module.CardDetailModal,
+  }))
+);
 
 const RARITY_ORDER: Record<string, number> = {
   eternal: 7, ascendant: 6, apex: 5, elite: 4, prime: 3, alloy: 2, core: 1,
@@ -142,12 +150,14 @@ export function CollectionVaultPage() {
         </>
       )}
 
-      <CardDetailModal
-        card={selected}
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        owned
-      />
+      <Suspense fallback={null}>
+        <CardDetailModal
+          card={selected}
+          open={!!selected}
+          onClose={() => setSelected(null)}
+          owned
+        />
+      </Suspense>
     </div>
   );
 }

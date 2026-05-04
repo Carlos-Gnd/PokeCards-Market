@@ -21,7 +21,10 @@ const RARITY_TO_TIER = {
     'Double Rare': { tier: 'elite', label: 'Double Rare' },
     'Ultra Rare': { tier: 'apex', label: 'Ultra Rare' },
     'Illustration Rare': { tier: 'apex', label: 'Illustration Rare' },
-    'Special Illustration Rare': { tier: 'ascendant', label: 'Special Illustration Rare' },
+    'Special Illustration Rare': {
+        tier: 'ascendant',
+        label: 'Special Illustration Rare',
+    },
     'Hyper Rare': { tier: 'eternal', label: 'Hyper Rare' },
     'Rare Holo': { tier: 'prime', label: 'Rare Holo' },
     'Rare Holo EX': { tier: 'apex', label: 'Rare Holo EX' },
@@ -39,7 +42,7 @@ const RARITY_TO_TIER = {
     'Rare Shiny GX': { tier: 'ascendant', label: 'Rare Shiny GX' },
     'Rare BREAK': { tier: 'elite', label: 'Rare BREAK' },
     'Amazing Rare': { tier: 'apex', label: 'Amazing Rare' },
-    'LEGEND': { tier: 'ascendant', label: 'LEGEND' },
+    LEGEND: { tier: 'ascendant', label: 'LEGEND' },
 };
 const TIER_ORDER = {
     eternal: 7,
@@ -77,7 +80,9 @@ let PokeapiService = PokeapiService_1 = class PokeapiService {
     }
     mapRow(row) {
         const pokemonId = pokemonIdFromCardId(row.id);
-        const tierInfo = (row.rareza ? RARITY_TO_TIER[row.rareza] : undefined) ?? {
+        const tierInfo = (row.rareza
+            ? RARITY_TO_TIER[row.rareza]
+            : undefined) ?? {
             tier: 'core',
             label: row.rareza ?? 'Sin clasificar',
         };
@@ -120,7 +125,8 @@ let PokeapiService = PokeapiService_1 = class PokeapiService {
       `;
             const cards = rows.map((r) => this.mapRow(r));
             cards.sort((a, b) => {
-                const r = (TIER_ORDER[b.rarity] ?? 0) - (TIER_ORDER[a.rarity] ?? 0);
+                const r = (TIER_ORDER[b.rarity] ?? 0) -
+                    (TIER_ORDER[a.rarity] ?? 0);
                 if (r !== 0)
                     return r;
                 return b.marketPrice - a.marketPrice;
@@ -143,6 +149,31 @@ let PokeapiService = PokeapiService_1 = class PokeapiService {
     async findOne(tcgId) {
         const cat = await this.getCatalog();
         return cat.find((c) => c.tcgId === tcgId) ?? null;
+    }
+    rowToPokeCard(row) {
+        const mp = typeof row.marketPrice === 'object' && 'toNumber' in row.marketPrice
+            ? row.marketPrice.toNumber()
+            : Number(row.marketPrice);
+        const tierInfo = RARITY_TO_TIER[row.rarity] ?? {
+            tier: 'core',
+            label: row.rarity,
+        };
+        return {
+            pokemonId: row.pokemonId,
+            tcgId: row.tcgId ?? `legacy-${row.pokemonId}`,
+            name: row.name,
+            type: row.type,
+            secondaryType: row.secondaryType,
+            rarity: tierInfo.tier,
+            rarityLabel: tierInfo.label,
+            variant: row.variant,
+            imageUrl: row.imageUrl,
+            marketPrice: mp,
+            stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
+            height: 0,
+            weight: 0,
+            abilities: [],
+        };
     }
 };
 exports.PokeapiService = PokeapiService;

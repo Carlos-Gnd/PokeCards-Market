@@ -33,4 +33,17 @@ export declare class PokeapiService {
     getCatalog(): Promise<PokeCard[]>;
     warmup(): Promise<void>;
     findOne(tcgId: string): Promise<PokeCard | null>;
+    rowToPokeCard(row: {
+        pokemonId: number;
+        tcgId: string | null;
+        name: string;
+        type: string;
+        secondaryType: string | null;
+        rarity: string;
+        variant: string;
+        imageUrl: string;
+        marketPrice: string | number | {
+            toNumber(): number;
+        };
+    }): PokeCard;
 }

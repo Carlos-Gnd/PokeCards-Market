@@ -20,6 +20,60 @@ let CardsService = class CardsService {
         this.poke = poke;
         this.prisma = prisma;
     }
+    async listPaginated(q) {
+        const { page, limit, rarity, type, search, sort } = q;
+        const where = {};
+        if (rarity)
+            where.rarity = rarity;
+        if (type)
+            where.OR = [{ type }, { secondaryType: type }];
+        if (search)
+            where.name = { contains: search, mode: 'insensitive' };
+        let orderBy = [
+            { marketPrice: 'desc' },
+        ];
+        switch (sort) {
+            case 'price-asc':
+                orderBy = [{ marketPrice: 'asc' }];
+                break;
+            case 'price-desc':
+                orderBy = [{ marketPrice: 'desc' }];
+                break;
+            case 'name-asc':
+                orderBy = [{ name: 'asc' }];
+                break;
+            case 'rarity-desc':
+                orderBy = [{ marketPrice: 'desc' }];
+                break;
+            case 'rarity-asc':
+                orderBy = [{ marketPrice: 'asc' }];
+                break;
+        }
+        const [total, cards] = await Promise.all([
+            this.prisma.card.count({ where }),
+            this.prisma.card.findMany({
+                where,
+                orderBy,
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
+        ]);
+        const mapped = cards.map((c) => this.poke.rowToPokeCard(c));
+        return {
+            count: total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            cards: mapped,
+        };
+    }
+    async listTrending() {
+        const cards = await this.prisma.card.findMany({
+            orderBy: { marketPrice: 'desc' },
+            take: 8,
+        });
+        return cards.map((c) => this.poke.rowToPokeCard(c));
+    }
     async listAll() {
         return this.poke.getCatalog();
     }

@@ -1,9 +1,18 @@
 import { CardsService } from './cards.service';
+export interface CardListQuery {
+    rarity?: string;
+    type?: string;
+    search?: string;
+    sort?: string;
+}
 export declare class CardsController {
     private readonly cards;
     constructor(cards: CardsService);
-    list(): Promise<{
+    list(rawPage: string | undefined, rawLimit: string | undefined, q: CardListQuery): Promise<{
         count: number;
+        page: number;
+        limit: number;
+        totalPages: number;
         cards: import("./pokeapi.service").PokeCard[];
     }>;
     trending(): Promise<{

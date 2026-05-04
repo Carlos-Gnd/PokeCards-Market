@@ -33,32 +33,35 @@ interface CartaPokemonRow {
 
 const RARITY_TO_TIER: Record<string, { tier: RarityTier; label: string }> = {
   // Scarlet & Violet era
-  Common:                       { tier: 'core',       label: 'Common' },
-  Uncommon:                     { tier: 'alloy',      label: 'Uncommon' },
-  Rare:                         { tier: 'prime',      label: 'Rare' },
-  'Double Rare':                { tier: 'elite',      label: 'Double Rare' },
-  'Ultra Rare':                 { tier: 'apex',       label: 'Ultra Rare' },
-  'Illustration Rare':          { tier: 'apex',       label: 'Illustration Rare' },
-  'Special Illustration Rare':  { tier: 'ascendant',  label: 'Special Illustration Rare' },
-  'Hyper Rare':                 { tier: 'eternal',    label: 'Hyper Rare' },
+  Common: { tier: 'core', label: 'Common' },
+  Uncommon: { tier: 'alloy', label: 'Uncommon' },
+  Rare: { tier: 'prime', label: 'Rare' },
+  'Double Rare': { tier: 'elite', label: 'Double Rare' },
+  'Ultra Rare': { tier: 'apex', label: 'Ultra Rare' },
+  'Illustration Rare': { tier: 'apex', label: 'Illustration Rare' },
+  'Special Illustration Rare': {
+    tier: 'ascendant',
+    label: 'Special Illustration Rare',
+  },
+  'Hyper Rare': { tier: 'eternal', label: 'Hyper Rare' },
   // Sword & Shield era
-  'Rare Holo':                  { tier: 'prime',      label: 'Rare Holo' },
-  'Rare Holo EX':               { tier: 'apex',       label: 'Rare Holo EX' },
-  'Rare Holo GX':               { tier: 'apex',       label: 'Rare Holo GX' },
-  'Rare Holo LV.X':             { tier: 'apex',       label: 'Rare Holo LV.X' },
-  'Rare Holo Star':             { tier: 'ascendant',  label: 'Rare Holo Star' },
-  'Rare Holo V':                { tier: 'elite',      label: 'Rare Holo V' },
-  'Rare Holo VMAX':             { tier: 'apex',       label: 'Rare Holo VMAX' },
-  'Rare Holo VSTAR':            { tier: 'apex',       label: 'Rare Holo VSTAR' },
-  'Rare Ultra':                 { tier: 'apex',       label: 'Rare Ultra' },
-  'Rare Secret':                { tier: 'ascendant',  label: 'Rare Secret' },
-  'Rare Rainbow':               { tier: 'ascendant',  label: 'Rare Rainbow' },
-  'Rare Prism Star':            { tier: 'elite',      label: 'Rare Prism Star' },
-  'Rare Shiny':                 { tier: 'elite',      label: 'Rare Shiny' },
-  'Rare Shiny GX':              { tier: 'ascendant',  label: 'Rare Shiny GX' },
-  'Rare BREAK':                 { tier: 'elite',      label: 'Rare BREAK' },
-  'Amazing Rare':               { tier: 'apex',       label: 'Amazing Rare' },
-  'LEGEND':                     { tier: 'ascendant',  label: 'LEGEND' },
+  'Rare Holo': { tier: 'prime', label: 'Rare Holo' },
+  'Rare Holo EX': { tier: 'apex', label: 'Rare Holo EX' },
+  'Rare Holo GX': { tier: 'apex', label: 'Rare Holo GX' },
+  'Rare Holo LV.X': { tier: 'apex', label: 'Rare Holo LV.X' },
+  'Rare Holo Star': { tier: 'ascendant', label: 'Rare Holo Star' },
+  'Rare Holo V': { tier: 'elite', label: 'Rare Holo V' },
+  'Rare Holo VMAX': { tier: 'apex', label: 'Rare Holo VMAX' },
+  'Rare Holo VSTAR': { tier: 'apex', label: 'Rare Holo VSTAR' },
+  'Rare Ultra': { tier: 'apex', label: 'Rare Ultra' },
+  'Rare Secret': { tier: 'ascendant', label: 'Rare Secret' },
+  'Rare Rainbow': { tier: 'ascendant', label: 'Rare Rainbow' },
+  'Rare Prism Star': { tier: 'elite', label: 'Rare Prism Star' },
+  'Rare Shiny': { tier: 'elite', label: 'Rare Shiny' },
+  'Rare Shiny GX': { tier: 'ascendant', label: 'Rare Shiny GX' },
+  'Rare BREAK': { tier: 'elite', label: 'Rare BREAK' },
+  'Amazing Rare': { tier: 'apex', label: 'Amazing Rare' },
+  LEGEND: { tier: 'ascendant', label: 'LEGEND' },
 };
 
 const TIER_ORDER: Record<RarityTier, number> = {
@@ -105,11 +108,12 @@ export class PokeapiService {
 
   private mapRow(row: CartaPokemonRow): PokeCard {
     const pokemonId = pokemonIdFromCardId(row.id);
-    const tierInfo: { tier: RarityTier; label: string } =
-      (row.rareza ? RARITY_TO_TIER[row.rareza] : undefined) ?? {
-        tier: 'core',
-        label: row.rareza ?? 'Sin clasificar',
-      };
+    const tierInfo: { tier: RarityTier; label: string } = (row.rareza
+      ? RARITY_TO_TIER[row.rareza]
+      : undefined) ?? {
+      tier: 'core',
+      label: row.rareza ?? 'Sin clasificar',
+    };
     const variant = variantFor(pokemonId, tierInfo.tier);
     const seed = pokemonId || row.id.length;
     const stats = {
@@ -151,14 +155,18 @@ export class PokeapiService {
       const cards = rows.map((r) => this.mapRow(r));
 
       cards.sort((a, b) => {
-        const r = (TIER_ORDER[b.rarity as RarityTier] ?? 0) - (TIER_ORDER[a.rarity as RarityTier] ?? 0);
+        const r =
+          (TIER_ORDER[b.rarity as RarityTier] ?? 0) -
+          (TIER_ORDER[a.rarity as RarityTier] ?? 0);
         if (r !== 0) return r;
         return b.marketPrice - a.marketPrice;
       });
 
       this.cache = cards;
       this.cacheAt = Date.now();
-      this.logger.log(`Catálogo cargado desde Supabase: ${cards.length} cartas en ${Date.now() - t0}ms`);
+      this.logger.log(
+        `Catálogo cargado desde Supabase: ${cards.length} cartas en ${Date.now() - t0}ms`,
+      );
       return cards;
     })();
 
@@ -170,11 +178,57 @@ export class PokeapiService {
   }
 
   async warmup() {
-    this.getCatalog().catch((err) => this.logger.warn(`Warmup falló: ${err.message}`));
+    this.getCatalog().catch((err) =>
+      this.logger.warn(`Warmup falló: ${err.message}`),
+    );
   }
 
   async findOne(tcgId: string): Promise<PokeCard | null> {
     const cat = await this.getCatalog();
     return cat.find((c) => c.tcgId === tcgId) ?? null;
+  }
+
+  /**
+   * Convierte una fila de la tabla `Card` de Prisma al shape `PokeCard`.
+   * Necesario para que CardsService.listPaginated() pueda mapear rows de BD.
+   */
+  rowToPokeCard(row: {
+    pokemonId: number;
+    tcgId: string | null;
+    name: string;
+    type: string;
+    secondaryType: string | null;
+    rarity: string;
+    variant: string;
+    imageUrl: string;
+    marketPrice: string | number | { toNumber(): number };
+  }): PokeCard {
+    const mp =
+      typeof row.marketPrice === 'object' && 'toNumber' in row.marketPrice
+        ? row.marketPrice.toNumber()
+        : Number(row.marketPrice);
+
+    const tierInfo = RARITY_TO_TIER[row.rarity] ?? {
+      tier: 'core' as const,
+      label: row.rarity,
+    };
+
+    return {
+      pokemonId: row.pokemonId,
+      tcgId: row.tcgId ?? `legacy-${row.pokemonId}`,
+      name: row.name,
+      type: row.type,
+      secondaryType: row.secondaryType,
+      rarity: tierInfo.tier,
+      rarityLabel: tierInfo.label,
+      variant: row.variant,
+      imageUrl: row.imageUrl,
+      marketPrice: mp,
+      // Stats no almacenadas en BD — valores por defecto seguros
+      stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
+      height: 0,
+      weight: 0,
+      abilities: [],
+    };
   }
 }
