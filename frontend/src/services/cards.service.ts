@@ -3,7 +3,7 @@ import type { ArcadiumCard } from '../types';
 
 export async function fetchCatalog(): Promise<ArcadiumCard[]> {
   const { data } = await api.get<{ count: number; cards: ArcadiumCard[] }>('/cards');
-  return data.cards;
+  return data?.cards || []; 
 }
 
 export async function fetchTrending(): Promise<ArcadiumCard[]> {

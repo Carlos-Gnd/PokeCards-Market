@@ -68,7 +68,12 @@ export function MarketplacePage() {
 
   const allTypes = useMemo(() => {
     const s = new Set<string>();
-    cards.forEach((c) => { s.add(c.type); if (c.secondaryType) s.add(c.secondaryType); });
+    if (Array.isArray(cards)) {
+      cards.forEach((c) => { 
+        s.add(c.type); 
+        if (c.secondaryType) s.add(c.secondaryType); 
+      });
+    }
     return Array.from(s).sort();
   }, [cards]);
 
