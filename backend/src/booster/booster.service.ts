@@ -15,6 +15,7 @@ import type {
   CartasPokemonRow,
   ColeccionesUsuarioIdRow,
 } from './booster.types';
+import { CardsService } from '../cards/cards.service';
 
 const HIGH_RARITIES: readonly string[] = [
   'Illustration Rare',
@@ -34,6 +35,7 @@ export class BoosterService {
     private readonly prisma: PrismaService,
     private readonly paypal: PaypalClient,
     private readonly config: ConfigService,
+    private readonly cardsService: CardsService, // ← NUEVO
   ) {
     this.price = Number(
       this.config.get<string>('BOOSTER_PACK_PRICE_USD') ?? '4.99',
@@ -208,11 +210,36 @@ export class BoosterService {
     if (!userId) return;
 
     for (const card of cards) {
+      try {
+        // 1. Garantiza que la carta exista en la tabla `cards` (Prisma)
+        //    ensureInDb busca por tcgId en el catálogo cacheado y hace upsert.
+        const prismaCard = await this.cardsService.ensureInDb(card.id);
+
+        // 2. Registra en user_cards (tabla que lee la colección)
+        //    orderId es opcional (nullable) → no hace falta para sobres.
+        await this.prisma.userCard.upsert({
+          where: { userId_cardId: { userId, cardId: prismaCard.id } },
+          update: { quantity: { increment: 1 } },
+          create: {
+            userId,
+            cardId: prismaCard.id,
+            obtainedFrom: 'booster',
+            // orderId queda null — el schema lo permite (@optional)
+          },
+        });
+      } catch (err) {
+        // Si una carta falla, continúa con las demás en lugar de romper todo
+        this.logger.warn(
+          `persistPack: no se pudo guardar carta ${card.id}: ${(err as Error).message}`,
+        );
+      }
+
+      // 3. Mantiene el insert legacy para no romper colecciones_usuario
       await this.prisma.$executeRaw`
-        INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
-        VALUES (${userId}, ${card.id}, ${paypalOrderId}, 'booster')
-        ON CONFLICT DO NOTHING
-      `;
+      INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
+      VALUES (${userId}, ${card.id}, ${paypalOrderId}, 'booster')
+      ON CONFLICT DO NOTHING
+    `;
     }
   }
 

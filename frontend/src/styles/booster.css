@@ -121,7 +121,7 @@
 }
 
 .bp-holo:hover {
-  transform: translateY(-4px) scale(1.015);
+  transform: rotateY(180deg) translateY(-4px) scale(1.015);
   box-shadow:
     0 22px 50px -16px rgba(109, 94, 248, 0.55),
     0 0 0 1px rgba(255, 255, 255, 0.12),
@@ -151,6 +151,7 @@
 }
 
 .bp-holo-legendary:hover {
+  transform: rotateY(180deg) translateY(-4px) scale(1.015);
   box-shadow:
     0 22px 60px -16px rgba(246, 196, 83, 0.65),
     0 0 0 1px rgba(246, 196, 83, 0.35),

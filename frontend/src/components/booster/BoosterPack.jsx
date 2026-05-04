@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { PayPalButtons } from '@paypal/react-paypal-js';
-import '../../styles/booster.css';
+import { useCallback, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { PayPalButtons } from "@paypal/react-paypal-js";
+import "../../styles/booster.css";
 
 /**
  * FUSIÓN DE BACKENDS:
@@ -14,22 +14,19 @@ import '../../styles/booster.css';
  *   POST /api/booster-pack/create-order → POST /api/booster/create-order
  *   POST /api/booster-pack/capture-order → POST /api/booster/capture-order
  */
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_URL || "";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
 
 const HIGH_RARITIES = new Set([
-  'Illustration Rare',
-  'Ultra Rare',
-  'Special Illustration Rare',
-  'Hyper Rare',
-  'Double Rare',
+  "Illustration Rare",
+  "Ultra Rare",
+  "Special Illustration Rare",
+  "Hyper Rare",
+  "Double Rare",
 ]);
 
-const LEGENDARY_RARITIES = new Set([
-  'Special Illustration Rare',
-  'Hyper Rare',
-]);
+const LEGENDARY_RARITIES = new Set(["Special Illustration Rare", "Hyper Rare"]);
 
 function isHighRarity(card) {
   if (!card) return false;
@@ -39,23 +36,23 @@ function isHighRarity(card) {
 
 function rarityBadgeClass(rareza) {
   switch (rareza) {
-    case 'Special Illustration Rare':
-    case 'Hyper Rare':
-      return 'bg-gold/20 text-gold border-gold/40';
-    case 'Illustration Rare':
-    case 'Ultra Rare':
-      return 'bg-primary/20 text-primary-glow border-primary/40';
-    case 'Double Rare':
-      return 'bg-accent/20 text-accent border-accent/40';
-    case 'Rare':
-      return 'bg-white/10 text-white border-white/20';
+    case "Special Illustration Rare":
+    case "Hyper Rare":
+      return "bg-gold/20 text-gold border-gold/40";
+    case "Illustration Rare":
+    case "Ultra Rare":
+      return "bg-primary/20 text-primary-glow border-primary/40";
+    case "Double Rare":
+      return "bg-accent/20 text-accent border-accent/40";
+    case "Rare":
+      return "bg-white/10 text-white border-white/20";
     default:
-      return 'bg-white/[0.04] text-white/60 border-white/10';
+      return "bg-white/[0.04] text-white/60 border-white/10";
   }
 }
 
 export default function BoosterPack({ userId = null }) {
-  const [phase, setPhase] = useState('idle');
+  const [phase, setPhase] = useState("idle");
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState(new Set());
   const [error, setError] = useState(null);
@@ -64,15 +61,15 @@ export default function BoosterPack({ userId = null }) {
   const beginReveal = useCallback((fetched) => {
     setCards(fetched);
     setFlipped(new Set());
-    setPhase('opening');
-    window.setTimeout(() => setPhase('revealed'), 1100);
+    setPhase("opening");
+    window.setTimeout(() => setPhase("revealed"), 1100);
   }, []);
 
   const handleCreateOrder = useCallback(async () => {
     setError(null);
     const res = await fetch(`${API_URL}/api/booster/create-order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     if (!res.ok) {
@@ -86,11 +83,11 @@ export default function BoosterPack({ userId = null }) {
   const handleApprove = useCallback(
     async (data) => {
       setError(null);
-      setPhase('paying');
+      setPhase("paying");
       try {
         const res = await fetch(`${API_URL}/api/booster/capture-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paypalOrderId: data.orderID, userId }),
         });
         if (!res.ok) {
@@ -104,8 +101,8 @@ export default function BoosterPack({ userId = null }) {
         });
         beginReveal(result.cartas);
       } catch (err) {
-        setError(err.message ?? 'No se pudo confirmar el pago');
-        setPhase('idle');
+        setError(err.message ?? "No se pudo confirmar el pago");
+        setPhase("idle");
       }
     },
     [beginReveal, userId],
@@ -113,33 +110,33 @@ export default function BoosterPack({ userId = null }) {
 
   const handleDemoOpen = useCallback(async () => {
     setError(null);
-    setPhase('paying');
+    setPhase("paying");
     try {
-      const res = await fetch(`${API_URL}/api/booster/demo`, { method: 'GET' });
+      const res = await fetch(`${API_URL}/api/booster/demo`, { method: "GET" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!Array.isArray(data.cartas) || data.cartas.length === 0) {
-        throw new Error('Respuesta inválida del servidor');
+        throw new Error("Respuesta inválida del servidor");
       }
       setSuccess(null);
       beginReveal(data.cartas);
     } catch (err) {
-      setError(err.message ?? 'No se pudo abrir el sobre');
-      setPhase('idle');
+      setError(err.message ?? "No se pudo abrir el sobre");
+      setPhase("idle");
     }
   }, [beginReveal]);
 
   const handleFlip = useCallback((id) => {
     setFlipped((prev) => {
+      if (prev.has(id)) return prev;
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.add(id);
       return next;
     });
   }, []);
 
   const handleReset = useCallback(() => {
-    setPhase('idle');
+    setPhase("idle");
     setCards([]);
     setFlipped(new Set());
     setError(null);
@@ -150,7 +147,7 @@ export default function BoosterPack({ userId = null }) {
     setFlipped(new Set(cards.map((c) => c.id)));
   }, [cards]);
 
-  const showPaymentUI = phase === 'idle' || phase === 'paying';
+  const showPaymentUI = phase === "idle" || phase === "paying";
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-12">
@@ -178,10 +175,10 @@ export default function BoosterPack({ userId = null }) {
         </div>
       )}
 
-      {success && phase === 'revealed' && (
+      {success && phase === "revealed" && (
         <div className="max-w-md mx-auto mb-6 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success text-center">
           Compra exitosa · Orden {success.paypalOrderId.slice(-8)}
-          {success.persisted ? ' · cartas guardadas en tu colección' : ''}
+          {success.persisted ? " · cartas guardadas en tu colección" : ""}
         </div>
       )}
 
@@ -200,22 +197,31 @@ export default function BoosterPack({ userId = null }) {
               aria-label="Sobre Prismatic Evolutions"
               animate={{
                 y: [0, -10, 0],
-                transition: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' },
+                transition: {
+                  duration: 3.6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
               }}
             />
 
             <div className="w-full max-w-sm flex flex-col items-stretch gap-3">
               {PAYPAL_CLIENT_ID ? (
                 <PayPalButtons
-                  style={{ layout: 'vertical', shape: 'pill', label: 'paypal', height: 44 }}
-                  disabled={phase === 'paying'}
+                  style={{
+                    layout: "vertical",
+                    shape: "pill",
+                    label: "paypal",
+                    height: 44,
+                  }}
+                  disabled={phase === "paying"}
                   createOrder={handleCreateOrder}
                   onApprove={handleApprove}
                   onError={(err) => {
-                    setError(err?.message ?? 'PayPal devolvió un error');
-                    setPhase('idle');
+                    setError(err?.message ?? "PayPal devolvió un error");
+                    setPhase("idle");
                   }}
-                  onCancel={() => setPhase('idle')}
+                  onCancel={() => setPhase("idle")}
                 />
               ) : (
                 <p className="text-error text-sm text-center">
@@ -226,10 +232,12 @@ export default function BoosterPack({ userId = null }) {
               <button
                 type="button"
                 onClick={handleDemoOpen}
-                disabled={phase === 'paying'}
+                disabled={phase === "paying"}
                 className="btn-ghost text-xs text-white/50 hover:text-white/80"
               >
-                {phase === 'paying' ? 'Procesando…' : 'Probar sin pagar (modo demo)'}
+                {phase === "paying"
+                  ? "Procesando…"
+                  : "Probar sin pagar (modo demo)"}
               </button>
             </div>
 
@@ -239,7 +247,7 @@ export default function BoosterPack({ userId = null }) {
           </motion.section>
         )}
 
-        {phase === 'opening' && (
+        {phase === "opening" && (
           <motion.div
             key="opening"
             initial={{ opacity: 1 }}
@@ -255,13 +263,16 @@ export default function BoosterPack({ userId = null }) {
                 opacity: [1, 1, 1, 1, 1, 0],
                 scale: [1, 1.03, 1.03, 1.03, 1, 0.85],
               }}
-              transition={{ duration: 1.05, times: [0, 0.15, 0.3, 0.45, 0.6, 0.85, 1] }}
+              transition={{
+                duration: 1.05,
+                times: [0, 0.15, 0.3, 0.45, 0.6, 0.85, 1],
+              }}
             />
             <p className="text-white/60 text-sm">Abriendo sobre…</p>
           </motion.div>
         )}
 
-        {phase === 'revealed' && (
+        {phase === "revealed" && (
           <motion.section
             key="cards"
             initial={{ opacity: 0 }}
@@ -272,7 +283,7 @@ export default function BoosterPack({ userId = null }) {
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
                 const high = isHighRarity(card);
-                const legendary = LEGENDARY_RARITIES.has(card.rareza ?? '');
+                const legendary = LEGENDARY_RARITIES.has(card.rareza ?? "");
                 const isFlipped = flipped.has(card.id);
                 return (
                   <motion.div
@@ -287,19 +298,27 @@ export default function BoosterPack({ userId = null }) {
                     className="relative"
                   >
                     <div
-                      className={`bp-flip-card ${isFlipped ? 'is-flipped' : ''}`}
+                      className={`bp-flip-card ${isFlipped ? "is-flipped" : ""}`}
                       onClick={() => handleFlip(card.id)}
                       onMouseMove={(e) => {
+                        // Solo aplicar el efecto holo cuando la carta ya está volteada (frente visible)
+                        if (!isFlipped) return;
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const mx = ((e.clientX - rect.left) / rect.width) * 100;
+                        const rawMx =
+                          ((e.clientX - rect.left) / rect.width) * 100;
                         const my = ((e.clientY - rect.top) / rect.height) * 100;
-                        e.currentTarget.style.setProperty('--bp-mx', `${mx}%`);
-                        e.currentTarget.style.setProperty('--bp-my', `${my}%`);
+                        // El eje X está invertido porque la cara tiene rotateY(180deg)
+                        // → espejamos para que el holo vaya en la dirección correcta
+                        e.currentTarget.style.setProperty(
+                          "--bp-mx",
+                          `${100 - rawMx}%`,
+                        );
+                        e.currentTarget.style.setProperty("--bp-my", `${my}%`);
                       }}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           handleFlip(card.id);
                         }
@@ -311,8 +330,8 @@ export default function BoosterPack({ userId = null }) {
                       </div>
                       <div
                         className={`bp-flip-face bp-flip-back ${
-                          high ? 'bp-holo' : ''
-                        } ${legendary ? 'bp-holo-legendary' : ''}`}
+                          high ? "bp-holo" : ""
+                        } ${legendary ? "bp-holo-legendary" : ""}`}
                       >
                         {card.imagenLarge ? (
                           <img
@@ -341,7 +360,7 @@ export default function BoosterPack({ userId = null }) {
                             card.rareza,
                           )}`}
                         >
-                          {card.rareza ?? 'Sin clasificar'}
+                          {card.rareza ?? "Sin clasificar"}
                         </div>
                       </motion.div>
                     )}
@@ -354,7 +373,11 @@ export default function BoosterPack({ userId = null }) {
               <button type="button" onClick={flipAll} className="btn-secondary">
                 Voltear todas
               </button>
-              <button type="button" onClick={handleReset} className="btn-primary">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="btn-primary"
+              >
                 Comprar otro sobre
               </button>
             </div>
