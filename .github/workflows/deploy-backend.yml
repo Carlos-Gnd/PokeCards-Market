@@ -1,0 +1,38 @@
+name: Deploy Backend to Azure
+
+on:
+  push:
+    branches: [ main ] # Se activa cada vez que hagas push a la rama main
+    paths:
+      - 'backend/**'   # Solo se activa si cambias algo dentro de la carpeta backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executing remote ssh commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Entrar a la carpeta del backend
+            cd ~/Arcadium/backend
+            
+            # 2. Bajar los cambios del repo
+            git pull origin main
+            
+            # 3. Cargar NVM y Node (necesario en sesiones SSH no interactivas)
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            
+            # 4. Instalar dependencias y actualizar Prisma
+            npm install
+            npx prisma generate
+            
+            # 5. Compilar el proyecto NestJS
+            npm run build
+            
+            # 6. Reiniciar la API en PM2 para aplicar cambios
+            pm2 restart arcadium-api
