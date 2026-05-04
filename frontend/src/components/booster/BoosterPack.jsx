@@ -14,7 +14,7 @@ import '../../styles/booster.css';
  *   POST /api/booster-pack/create-order → POST /api/booster/create-order
  *   POST /api/booster-pack/capture-order → POST /api/booster/capture-order
  */
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
 
