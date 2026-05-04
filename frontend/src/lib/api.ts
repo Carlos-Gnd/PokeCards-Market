@@ -1,8 +1,15 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+// En producción (Netlify) VITE_API_URL está vacío → usa ruta relativa "/api"
+// y Netlify redirige al VPS via el proxy en netlify.toml.
+// En local VITE_API_URL=http://localhost:3000 → apunta directo al backend.
+const apiBase = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
 export const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api',
+  baseURL: apiBase,
   timeout: 30000,
 });
 

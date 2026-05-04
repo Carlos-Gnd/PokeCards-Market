@@ -1,0 +1,18 @@
+[build]
+  base    = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy: todas las llamadas /api/* van al VPS — evita el problema de mixed content
+# Netlify las reenvía en HTTPS→HTTP en el servidor, el browser nunca ve la URL HTTP
+[[redirects]]
+  from   = "/api/*"
+  to     = "http://48.214.145.60:3000/api/:splat"
+  status = 200
+  force  = true
+
+# SPA fallback — todas las rutas React van al index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
