@@ -1,5 +1,6 @@
 export interface ArcadiumCard {
   pokemonId: number;
+  tcgId: string;
   name: string;
   type: string;
   secondaryType: string | null;
@@ -27,6 +28,7 @@ export interface UserCardEntry {
   card: {
     id: number;
     pokemonId: number;
+    tcgId: string | null;
     name: string;
     type: string;
     secondaryType: string | null;
@@ -44,6 +46,7 @@ export interface CreateOrderResponse {
   card: {
     id: number;
     pokemonId: number;
+    tcgId: string | null;
     name: string;
     rarity: string;
     variant: string;

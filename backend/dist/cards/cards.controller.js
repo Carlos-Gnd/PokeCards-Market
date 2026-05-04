@@ -28,8 +28,8 @@ let CardsController = class CardsController {
         const cards = await this.cards.listAll();
         return { cards: cards.slice(0, 8) };
     }
-    async one(pokemonId) {
-        return this.cards.getOne(pokemonId);
+    async one(tcgId) {
+        return this.cards.getOne(tcgId);
     }
 };
 exports.CardsController = CardsController;
@@ -48,11 +48,11 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CardsController.prototype, "trending", null);
 __decorate([
-    (0, common_1.Get)(':pokemonId'),
+    (0, common_1.Get)(':tcgId'),
     (0, common_1.Header)('Cache-Control', 'public, max-age=300'),
-    __param(0, (0, common_1.Param)('pokemonId', common_1.ParseIntPipe)),
+    __param(0, (0, common_1.Param)('tcgId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], CardsController.prototype, "one", null);
 exports.CardsController = CardsController = __decorate([

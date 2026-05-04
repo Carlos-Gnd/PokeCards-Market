@@ -11,6 +11,7 @@ export declare class CollectionController {
         card: {
             id: number;
             pokemonId: number;
+            tcgId: string | null;
             name: string;
             type: string;
             secondaryType: string | null;

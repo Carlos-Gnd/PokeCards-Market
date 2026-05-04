@@ -19,6 +19,7 @@ export class CollectionService {
       card: {
         id: Number(uc.card.id),
         pokemonId: uc.card.pokemonId,
+        tcgId: uc.card.tcgId,
         name: uc.card.name,
         type: uc.card.type,
         secondaryType: uc.card.secondaryType,

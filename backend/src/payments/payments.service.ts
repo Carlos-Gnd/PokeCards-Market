@@ -23,9 +23,9 @@ export class PaymentsService {
     private readonly paypal: PaypalClient,
   ) {}
 
-  /** Crea una orden de PayPal a partir del pokemonId. Devuelve { paypalOrderId, approveUrl, ... }. */
-  async createOrder(userId: string, pokemonId: number) {
-    const card = await this.cards.ensureInDb(pokemonId);
+  /** Crea una orden de PayPal a partir del tcgId (ej. "sv3pt5-12"). Devuelve { paypalOrderId, approveUrl, ... }. */
+  async createOrder(userId: string, tcgId: string) {
+    const card = await this.cards.ensureInDb(tcgId);
 
     // Validar que el usuario no posea ya esta carta
     const owned = await this.prisma.userCard.findUnique({
@@ -68,6 +68,7 @@ export class PaymentsService {
       card: {
         id: Number(card.id),
         pokemonId: card.pokemonId,
+        tcgId: card.tcgId,
         name: card.name,
         rarity: card.rarity,
         variant: card.variant,
@@ -86,6 +87,7 @@ export class PaymentsService {
       card: {
         id: Number(userCard.card.id),
         pokemonId: userCard.card.pokemonId,
+        tcgId: userCard.card.tcgId,
         name: userCard.card.name,
         type: userCard.card.type,
         secondaryType: userCard.card.secondaryType,
@@ -181,7 +183,8 @@ export class PaymentsService {
       });
 
       // Reflejo en tabla legacy (colecciones_usuario) para el módulo de booster
-      const cartaPokemonId = `sv3pt5-${userCard.card.pokemonId}`;
+      // Usa tcgId real (ej. "sv3pt5-12") en lugar de reconstruirlo desde pokemonId
+      const cartaPokemonId = userCard.card.tcgId ?? `sv3pt5-${userCard.card.pokemonId}`;
       await tx.$executeRaw`
         INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
         SELECT

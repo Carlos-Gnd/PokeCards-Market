@@ -13,18 +13,19 @@ export class CardsService {
     return this.poke.getCatalog();
   }
 
-  async getOne(pokemonId: number) {
-    const card = await this.poke.findOne(pokemonId);
+  async getOne(tcgId: string) {
+    const card = await this.poke.findOne(tcgId);
     if (!card) throw new NotFoundException('Carta no encontrada');
     return card;
   }
 
   /** Asegura que la carta exista en BD (para FK de orders/user_cards) y devuelve el row. */
-  async ensureInDb(pokemonId: number) {
-    const card = await this.getOne(pokemonId);
+  async ensureInDb(tcgId: string) {
+    const card = await this.getOne(tcgId);
     return this.prisma.card.upsert({
-      where: { pokemonId: card.pokemonId },
+      where: { tcgId: card.tcgId },
       update: {
+        pokemonId: card.pokemonId,
         name: card.name,
         type: card.type,
         secondaryType: card.secondaryType,
@@ -35,6 +36,7 @@ export class CardsService {
       },
       create: {
         pokemonId: card.pokemonId,
+        tcgId: card.tcgId,
         name: card.name,
         type: card.type,
         secondaryType: card.secondaryType,

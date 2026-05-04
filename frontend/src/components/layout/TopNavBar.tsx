@@ -19,7 +19,7 @@ export function TopNavBar() {
   const navigate = useNavigate();
   const metadata = user?.user_metadata as UserMetadata | undefined;
   const username = metadata?.username ?? user?.email?.split('@')[0];
-  const totalCards = items.reduce((acc, e) => acc + e.quantity, 0);
+  const totalCards = user ? items.reduce((acc, e) => acc + e.quantity, 0) : 0;
 
   const handleLogout = async () => {
     await signOut();

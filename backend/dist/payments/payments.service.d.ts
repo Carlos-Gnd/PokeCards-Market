@@ -7,13 +7,14 @@ export declare class PaymentsService {
     private readonly paypal;
     private readonly logger;
     constructor(prisma: PrismaService, cards: CardsService, paypal: PaypalClient);
-    createOrder(userId: string, pokemonId: number): Promise<{
+    createOrder(userId: string, tcgId: string): Promise<{
         paypalOrderId: string;
         approveUrl: string | undefined;
         amount: string;
         card: {
             id: number;
             pokemonId: number;
+            tcgId: string | null;
             name: string;
             rarity: string;
             variant: string;
@@ -31,6 +32,7 @@ export declare class PaymentsService {
             card: {
                 id: number;
                 pokemonId: number;
+                tcgId: string | null;
                 name: string;
                 type: string;
                 secondaryType: string | null;
@@ -56,6 +58,7 @@ export declare class PaymentsService {
             card: {
                 id: number;
                 pokemonId: number;
+                tcgId: string | null;
                 name: string;
                 type: string;
                 secondaryType: string | null;

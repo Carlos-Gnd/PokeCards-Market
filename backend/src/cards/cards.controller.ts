@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Header, Param } from '@nestjs/common';
 import { CardsService } from './cards.service';
 
 @Controller('cards')
@@ -19,9 +19,9 @@ export class CardsController {
     return { cards: cards.slice(0, 8) };
   }
 
-  @Get(':pokemonId')
+  @Get(':tcgId')
   @Header('Cache-Control', 'public, max-age=300')
-  async one(@Param('pokemonId', ParseIntPipe) pokemonId: number) {
-    return this.cards.getOne(pokemonId);
+  async one(@Param('tcgId') tcgId: string) {
+    return this.cards.getOne(tcgId);
   }
 }

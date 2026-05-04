@@ -11,6 +11,5 @@ export declare const VARIANTS: {
     variant: CardVariant;
     label: string;
 }[];
-export declare function rarityFor(pokemonId: number): RarityDef;
 export declare function variantFor(pokemonId: number, tier: RarityTier): CardVariant;
 export declare function priceFor(pokemonId: number, tier: RarityTier, variant: CardVariant): number;

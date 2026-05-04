@@ -23,17 +23,18 @@ let CardsService = class CardsService {
     async listAll() {
         return this.poke.getCatalog();
     }
-    async getOne(pokemonId) {
-        const card = await this.poke.findOne(pokemonId);
+    async getOne(tcgId) {
+        const card = await this.poke.findOne(tcgId);
         if (!card)
             throw new common_1.NotFoundException('Carta no encontrada');
         return card;
     }
-    async ensureInDb(pokemonId) {
-        const card = await this.getOne(pokemonId);
+    async ensureInDb(tcgId) {
+        const card = await this.getOne(tcgId);
         return this.prisma.card.upsert({
-            where: { pokemonId: card.pokemonId },
+            where: { tcgId: card.tcgId },
             update: {
+                pokemonId: card.pokemonId,
                 name: card.name,
                 type: card.type,
                 secondaryType: card.secondaryType,
@@ -44,6 +45,7 @@ let CardsService = class CardsService {
             },
             create: {
                 pokemonId: card.pokemonId,
+                tcgId: card.tcgId,
                 name: card.name,
                 type: card.type,
                 secondaryType: card.secondaryType,

@@ -1,8 +1,8 @@
 import { api } from '../lib/api';
 import type { CreateOrderResponse, CaptureOrderResponse } from '../types';
 
-export async function createOrder(pokemonId: number): Promise<CreateOrderResponse> {
-  const { data } = await api.post<CreateOrderResponse>('/payments/create-order', { pokemonId });
+export async function createOrder(tcgId: string): Promise<CreateOrderResponse> {
+  const { data } = await api.post<CreateOrderResponse>('/payments/create-order', { tcgId });
   return data;
 }
 

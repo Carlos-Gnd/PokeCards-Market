@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { PayPalButtons } from '@paypal/react-paypal-js';
 import '../../styles/booster.css';
 
 /**
@@ -60,17 +60,6 @@ export default function BoosterPack({ userId = null }) {
   const [flipped, setFlipped] = useState(new Set());
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  const paypalOptions = useMemo(
-    () => ({
-      'client-id': PAYPAL_CLIENT_ID,
-      currency: 'USD',
-      intent: 'capture',
-      'enable-funding': 'card',
-      'disable-funding': 'paylater,credit',
-    }),
-    [],
-  );
 
   const beginReveal = useCallback((fetched) => {
     setCards(fetched);
@@ -217,19 +206,17 @@ export default function BoosterPack({ userId = null }) {
 
             <div className="w-full max-w-sm flex flex-col items-stretch gap-3">
               {PAYPAL_CLIENT_ID ? (
-                <PayPalScriptProvider options={paypalOptions}>
-                  <PayPalButtons
-                    style={{ layout: 'vertical', shape: 'pill', label: 'paypal', height: 44 }}
-                    disabled={phase === 'paying'}
-                    createOrder={handleCreateOrder}
-                    onApprove={handleApprove}
-                    onError={(err) => {
-                      setError(err?.message ?? 'PayPal devolvió un error');
-                      setPhase('idle');
-                    }}
-                    onCancel={() => setPhase('idle')}
-                  />
-                </PayPalScriptProvider>
+                <PayPalButtons
+                  style={{ layout: 'vertical', shape: 'pill', label: 'paypal', height: 44 }}
+                  disabled={phase === 'paying'}
+                  createOrder={handleCreateOrder}
+                  onApprove={handleApprove}
+                  onError={(err) => {
+                    setError(err?.message ?? 'PayPal devolvió un error');
+                    setPhase('idle');
+                  }}
+                  onCancel={() => setPhase('idle')}
+                />
               ) : (
                 <p className="text-error text-sm text-center">
                   Falta VITE_PAYPAL_CLIENT_ID en el .env del frontend.
@@ -285,7 +272,7 @@ export default function BoosterPack({ userId = null }) {
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
                 const high = isHighRarity(card);
-                const legendary = LEGENDARY_RARITIES.has(card.rareza);
+                const legendary = LEGENDARY_RARITIES.has(card.rareza ?? '');
                 const isFlipped = flipped.has(card.id);
                 return (
                   <motion.div

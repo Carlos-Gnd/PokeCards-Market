@@ -65,7 +65,7 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
             />
           </div>
           <motion.div
-            key={`${card.pokemonId}-${unlocked}`}
+            key={`${card.tcgId}-${unlocked}`}
             initial={unlocked ? { scale: 0.5, rotate: -8, opacity: 0 } : { scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 180, damping: 16 }}
@@ -176,10 +176,10 @@ export function CardDetailModal({ card, open, onClose, owned }: Props) {
                 <PayPalButtons
                   style={{ layout: 'horizontal', shape: 'rect', label: 'paypal', color: 'gold', height: 45, tagline: false }}
                   fundingSource="paypal"
-                  forceReRender={[card.pokemonId, card.marketPrice]}
+                  forceReRender={[card.tcgId, card.marketPrice]}
                   createOrder={async () => {
                     try {
-                      const r = await createOrder(card.pokemonId);
+                      const r = await createOrder(card.tcgId);
                       return r.paypalOrderId;
                     } catch (err: unknown) {
                       toast.error(getUiMessage(err, 'No se pudo crear la orden'));

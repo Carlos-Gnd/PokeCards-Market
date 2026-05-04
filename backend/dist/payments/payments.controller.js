@@ -24,7 +24,7 @@ let PaymentsController = class PaymentsController {
         this.payments = payments;
     }
     create(user, dto) {
-        return this.payments.createOrder(user.id, dto.pokemonId);
+        return this.payments.createOrder(user.id, dto.tcgId);
     }
     capture(user, dto) {
         return this.payments.captureOrder(user.id, dto.paypalOrderId);

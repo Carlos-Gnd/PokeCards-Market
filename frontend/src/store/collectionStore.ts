@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 
 interface CollectionState {
   items: UserCardEntry[];
-  ownedIds: Set<number>;
+  ownedIds: Set<string>;
   loading: boolean;
   fetch: () => Promise<void>;
   add: (entry: UserCardEntry) => void;
@@ -22,9 +22,10 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
       // Usa el endpoint NestJS /api/collection (requiere Bearer token,
       // que el interceptor de `api` adjunta automáticamente desde Supabase).
       const { data } = await api.get<UserCardEntry[]>('/collection');
+      const items = Array.isArray(data) ? data : [];
       set({
-        items: data,
-        ownedIds: new Set(data.map((e) => e.card.pokemonId)),
+        items,
+        ownedIds: new Set(items.map((e) => e.card.tcgId).filter(Boolean) as string[]),
         loading: false,
       });
     } catch (err) {
@@ -36,12 +37,12 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
   add: (entry) => {
     const { items, ownedIds } = get();
     const next = new Set(ownedIds);
-    next.add(entry.card.pokemonId);
-    const exists = items.find((i) => i.card.pokemonId === entry.card.pokemonId);
+    if (entry.card.tcgId) next.add(entry.card.tcgId);
+    const exists = items.find((i) => i.card.tcgId === entry.card.tcgId);
     if (exists) {
       set({
         items: items.map((i) =>
-          i.card.pokemonId === entry.card.pokemonId
+          i.card.tcgId === entry.card.tcgId
             ? { ...i, quantity: i.quantity + 1 }
             : i,
         ),
@@ -52,5 +53,5 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     }
   },
 
-  reset: () => set({ items: [], ownedIds: new Set() }),
+  reset: () => set({ items: [], ownedIds: new Set<string>() }),
 }));

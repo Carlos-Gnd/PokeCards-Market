@@ -5,12 +5,13 @@ export declare class CardsService {
     private readonly prisma;
     constructor(poke: PokeapiService, prisma: PrismaService);
     listAll(): Promise<PokeCard[]>;
-    getOne(pokemonId: number): Promise<PokeCard>;
-    ensureInDb(pokemonId: number): Promise<{
+    getOne(tcgId: string): Promise<PokeCard>;
+    ensureInDb(tcgId: string): Promise<{
         id: bigint;
         createdAt: Date;
         updatedAt: Date;
         name: string;
+        tcgId: string | null;
         pokemonId: number;
         type: string;
         secondaryType: string | null;

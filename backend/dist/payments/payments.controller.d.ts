@@ -11,6 +11,7 @@ export declare class PaymentsController {
         card: {
             id: number;
             pokemonId: number;
+            tcgId: string | null;
             name: string;
             rarity: string;
             variant: string;
@@ -27,6 +28,7 @@ export declare class PaymentsController {
             card: {
                 id: number;
                 pokemonId: number;
+                tcgId: string | null;
                 name: string;
                 type: string;
                 secondaryType: string | null;
@@ -52,6 +54,7 @@ export declare class PaymentsController {
             card: {
                 id: number;
                 pokemonId: number;
+                tcgId: string | null;
                 name: string;
                 type: string;
                 secondaryType: string | null;

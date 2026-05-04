@@ -25,8 +25,8 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
         this.cards = cards;
         this.paypal = paypal;
     }
-    async createOrder(userId, pokemonId) {
-        const card = await this.cards.ensureInDb(pokemonId);
+    async createOrder(userId, tcgId) {
+        const card = await this.cards.ensureInDb(tcgId);
         const owned = await this.prisma.userCard.findUnique({
             where: { userId_cardId: { userId, cardId: card.id } },
         });
@@ -59,6 +59,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             card: {
                 id: Number(card.id),
                 pokemonId: card.pokemonId,
+                tcgId: card.tcgId,
                 name: card.name,
                 rarity: card.rarity,
                 variant: card.variant,
@@ -75,6 +76,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
             card: {
                 id: Number(userCard.card.id),
                 pokemonId: userCard.card.pokemonId,
+                tcgId: userCard.card.tcgId,
                 name: userCard.card.name,
                 type: userCard.card.type,
                 secondaryType: userCard.card.secondaryType,
@@ -151,7 +153,7 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
                 },
                 include: { card: true },
             });
-            const cartaPokemonId = `sv3pt5-${userCard.card.pokemonId}`;
+            const cartaPokemonId = userCard.card.tcgId ?? `sv3pt5-${userCard.card.pokemonId}`;
             await tx.$executeRaw `
         INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
         SELECT

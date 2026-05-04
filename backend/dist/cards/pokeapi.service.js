@@ -23,6 +23,23 @@ const RARITY_TO_TIER = {
     'Illustration Rare': { tier: 'apex', label: 'Illustration Rare' },
     'Special Illustration Rare': { tier: 'ascendant', label: 'Special Illustration Rare' },
     'Hyper Rare': { tier: 'eternal', label: 'Hyper Rare' },
+    'Rare Holo': { tier: 'prime', label: 'Rare Holo' },
+    'Rare Holo EX': { tier: 'apex', label: 'Rare Holo EX' },
+    'Rare Holo GX': { tier: 'apex', label: 'Rare Holo GX' },
+    'Rare Holo LV.X': { tier: 'apex', label: 'Rare Holo LV.X' },
+    'Rare Holo Star': { tier: 'ascendant', label: 'Rare Holo Star' },
+    'Rare Holo V': { tier: 'elite', label: 'Rare Holo V' },
+    'Rare Holo VMAX': { tier: 'apex', label: 'Rare Holo VMAX' },
+    'Rare Holo VSTAR': { tier: 'apex', label: 'Rare Holo VSTAR' },
+    'Rare Ultra': { tier: 'apex', label: 'Rare Ultra' },
+    'Rare Secret': { tier: 'ascendant', label: 'Rare Secret' },
+    'Rare Rainbow': { tier: 'ascendant', label: 'Rare Rainbow' },
+    'Rare Prism Star': { tier: 'elite', label: 'Rare Prism Star' },
+    'Rare Shiny': { tier: 'elite', label: 'Rare Shiny' },
+    'Rare Shiny GX': { tier: 'ascendant', label: 'Rare Shiny GX' },
+    'Rare BREAK': { tier: 'elite', label: 'Rare BREAK' },
+    'Amazing Rare': { tier: 'apex', label: 'Amazing Rare' },
+    'LEGEND': { tier: 'ascendant', label: 'LEGEND' },
 };
 const TIER_ORDER = {
     eternal: 7,
@@ -74,6 +91,7 @@ let PokeapiService = PokeapiService_1 = class PokeapiService {
         };
         return {
             pokemonId,
+            tcgId: row.id,
             name: row.nombre,
             type: row.tipo ?? 'Colorless',
             secondaryType: null,
@@ -122,9 +140,9 @@ let PokeapiService = PokeapiService_1 = class PokeapiService {
     async warmup() {
         this.getCatalog().catch((err) => this.logger.warn(`Warmup falló: ${err.message}`));
     }
-    async findOne(pokemonId) {
+    async findOne(tcgId) {
         const cat = await this.getCatalog();
-        return cat.find((c) => c.pokemonId === pokemonId) ?? null;
+        return cat.find((c) => c.tcgId === tcgId) ?? null;
     }
 };
 exports.PokeapiService = PokeapiService;

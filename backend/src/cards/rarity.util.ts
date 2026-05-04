@@ -82,21 +82,6 @@ function det01(seed: number): number {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
-/** Devuelve la rareza determinística para un pokemon_id según drop-rate ARCADIUM. */
-export function rarityFor(pokemonId: number): RarityDef {
-  const forced = FORCED_TIERS[pokemonId];
-  if (forced) {
-    return RARITY_TABLE.find((r) => r.tier === forced)!;
-  }
-  const roll = det01(pokemonId * 9301 + 49297) * 100; // 0..100
-  let acc = 0;
-  for (const r of RARITY_TABLE) {
-    acc += r.dropRate;
-    if (roll <= acc) return r;
-  }
-  return RARITY_TABLE[0];
-}
-
 /** Variante determinística según la rareza (mejores rarezas tienden a variantes más raras). */
 export function variantFor(pokemonId: number, tier: RarityTier): CardVariant {
   const roll = det01(pokemonId * 7919 + 1031);

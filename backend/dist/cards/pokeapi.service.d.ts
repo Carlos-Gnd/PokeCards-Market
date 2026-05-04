@@ -1,6 +1,7 @@
 import { PrismaService } from '../prisma/prisma.service';
 export interface PokeCard {
     pokemonId: number;
+    tcgId: string;
     name: string;
     type: string;
     secondaryType: string | null;
@@ -31,5 +32,5 @@ export declare class PokeapiService {
     private mapRow;
     getCatalog(): Promise<PokeCard[]>;
     warmup(): Promise<void>;
-    findOne(pokemonId: number): Promise<PokeCard | null>;
+    findOne(tcgId: string): Promise<PokeCard | null>;
 }

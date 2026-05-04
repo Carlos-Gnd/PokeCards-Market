@@ -80,8 +80,8 @@ export function LandingPage() {
 
   useEffect(() => {
     fetchTrending()
-      .then(setTrending)
-      .catch(() => undefined)
+      .then((cards) => setTrending(cards ?? []))
+      .catch(() => setTrending([]))
       .finally(() => setTrendingLoading(false));
   }, []);
 
@@ -255,7 +255,7 @@ export function LandingPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6 justify-items-center">
               {trending.slice(0, 8).map((card, idx) => (
                 <motion.div
-                  key={card.pokemonId}
+                  key={card.tcgId}
                   initial={{ opacity: 0, y: 32 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-40px" }}

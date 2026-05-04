@@ -80,7 +80,7 @@ export function MarketplacePage() {
     }
     if (rarities.size) out = out.filter((c) => rarities.has(c.rarity));
     if (types.size) out = out.filter((c) => types.has(c.type) || (c.secondaryType && types.has(c.secondaryType)));
-    if (onlyAvailable) out = out.filter((c) => !ownedIds.has(c.pokemonId));
+    if (onlyAvailable) out = out.filter((c) => !ownedIds.has(c.tcgId));
     out = [...out].sort((a, b) => {
       switch (sort) {
         case 'rarity-desc': return (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0) || b.marketPrice - a.marketPrice;
@@ -263,12 +263,12 @@ export function MarketplacePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-7 sm:gap-x-5 lg:gap-x-6 lg:gap-y-8 pt-4">
             {filtered.map((card) => (
               <div
-                key={card.pokemonId}
+                key={card.tcgId}
                 className="w-full max-w-[180px] sm:max-w-[210px] xl:max-w-[240px] justify-self-center"
               >
                 <Card
                   card={card}
-                  owned={ownedIds.has(card.pokemonId)}
+                  owned={ownedIds.has(card.tcgId)}
                   onClick={() => setSelected(card)}
                   size="sm"
                   enableTilt={false}
@@ -284,7 +284,7 @@ export function MarketplacePage() {
         card={selected}
         open={!!selected}
         onClose={() => setSelected(null)}
-        owned={selected ? ownedIds.has(selected.pokemonId) : false}
+        owned={selected ? ownedIds.has(selected.tcgId) : false}
       />
     </div>
   );

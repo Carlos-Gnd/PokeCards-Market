@@ -8,10 +8,10 @@ export async function fetchCatalog(): Promise<ArcadiumCard[]> {
 
 export async function fetchTrending(): Promise<ArcadiumCard[]> {
   const { data } = await api.get<{ cards: ArcadiumCard[] }>('/cards/trending');
-  return data.cards;
+  return data.cards ?? [];
 }
 
-export async function fetchOne(pokemonId: number): Promise<ArcadiumCard> {
-  const { data } = await api.get<ArcadiumCard>(`/cards/${pokemonId}`);
+export async function fetchOne(tcgId: string): Promise<ArcadiumCard> {
+  const { data } = await api.get<ArcadiumCard>(`/cards/${tcgId}`);
   return data;
 }

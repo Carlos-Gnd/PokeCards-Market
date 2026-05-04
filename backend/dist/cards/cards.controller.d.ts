@@ -9,5 +9,5 @@ export declare class CardsController {
     trending(): Promise<{
         cards: import("./pokeapi.service").PokeCard[];
     }>;
-    one(pokemonId: number): Promise<import("./pokeapi.service").PokeCard>;
+    one(tcgId: string): Promise<import("./pokeapi.service").PokeCard>;
 }

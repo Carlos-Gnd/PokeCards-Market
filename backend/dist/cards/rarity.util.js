@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VARIANTS = exports.RARITY_TABLE = void 0;
-exports.rarityFor = rarityFor;
 exports.variantFor = variantFor;
 exports.priceFor = priceFor;
 exports.RARITY_TABLE = [
@@ -46,20 +45,6 @@ function det01(seed) {
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
-function rarityFor(pokemonId) {
-    const forced = FORCED_TIERS[pokemonId];
-    if (forced) {
-        return exports.RARITY_TABLE.find((r) => r.tier === forced);
-    }
-    const roll = det01(pokemonId * 9301 + 49297) * 100;
-    let acc = 0;
-    for (const r of exports.RARITY_TABLE) {
-        acc += r.dropRate;
-        if (roll <= acc)
-            return r;
-    }
-    return exports.RARITY_TABLE[0];
 }
 function variantFor(pokemonId, tier) {
     const roll = det01(pokemonId * 7919 + 1031);

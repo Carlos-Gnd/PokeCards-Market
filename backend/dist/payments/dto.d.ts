@@ -1,5 +1,5 @@
 export declare class CreateOrderDto {
-    pokemonId: number;
+    tcgId: string;
 }
 export declare class CaptureOrderDto {
     paypalOrderId: string;

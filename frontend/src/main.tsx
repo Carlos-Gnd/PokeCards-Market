@@ -12,9 +12,9 @@ const paypalOptions: ReactPayPalScriptOptions = {
   currency: 'USD',
   intent: 'capture',
   components: 'buttons',
-  // Solo botón PayPal: sin tarjeta, sin crédito, sin pay-later
-  'disable-funding': 'card,credit,paylater,venmo,sepa,bancontact',
-  'enable-funding': 'paypal',
+  // Habilitar PayPal y tarjeta; deshabilitar alternativas no soportadas en sandbox
+  'disable-funding': 'credit,paylater,venmo,sepa,bancontact',
+  'enable-funding': 'paypal,card',
 };
 
 createRoot(document.getElementById('root')!).render(

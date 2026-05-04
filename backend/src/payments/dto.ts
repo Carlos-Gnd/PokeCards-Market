@@ -1,9 +1,9 @@
-import { IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateOrderDto {
-  @IsInt()
-  @Min(1)
-  pokemonId!: number;
+  @IsString()
+  @IsNotEmpty()
+  tcgId!: string;
 }
 
 export class CaptureOrderDto {

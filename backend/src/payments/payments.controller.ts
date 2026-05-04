@@ -12,7 +12,7 @@ export class PaymentsController {
 
   @Post('create-order')
   create(@CurrentUser() user: SessionUser, @Body() dto: CreateOrderDto) {
-    return this.payments.createOrder(user.id, dto.pokemonId);
+    return this.payments.createOrder(user.id, dto.tcgId);
   }
 
   @Post('capture-order')

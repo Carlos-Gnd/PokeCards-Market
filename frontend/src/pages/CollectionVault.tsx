@@ -103,6 +103,7 @@ export function CollectionVaultPage() {
               */
               const card: ArcadiumCard = {
                 pokemonId: entry.card.pokemonId,
+                tcgId: entry.card.tcgId ?? `legacy-${entry.card.pokemonId}`,
                 name: entry.card.name,
                 type: entry.card.type,
                 secondaryType: entry.card.secondaryType,

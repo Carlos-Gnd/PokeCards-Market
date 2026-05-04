@@ -10,6 +10,7 @@ export declare class CollectionService {
         card: {
             id: number;
             pokemonId: number;
+            tcgId: string | null;
             name: string;
             type: string;
             secondaryType: string | null;
