@@ -119,7 +119,7 @@ export function MarketplacePage() {
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <h2 className="font-display font-bold text-2xl mb-2">No pudimos cargar el catálogo</h2>
         <p className="text-white/55 mb-6">{error}</p>
-        <p className="text-xs text-white/40">Asegúrate de que el backend está corriendo en <code className="font-mono text-primary">localhost:3000</code></p>
+        <p className="text-xs text-white/40">Revisa la conexión de red o contacta a soporte.</p>
       </div>
     );
   }

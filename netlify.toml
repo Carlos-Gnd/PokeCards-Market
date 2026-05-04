@@ -7,7 +7,7 @@
 # Netlify las reenvía en HTTPS→HTTP en el servidor, el browser nunca ve la URL HTTP
 [[redirects]]
   from   = "/api/*"
-  to     = "http://48.214.145.60:3000/api/:splat"
+  to     = "http://48.214.145.6:3000/api/:splat"
   status = 200
   force  = true
 
