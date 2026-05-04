@@ -22,49 +22,42 @@ let CardsService = class CardsService {
     }
     async listPaginated(q) {
         const { page, limit, rarity, type, search, sort } = q;
-        const where = {};
-        if (rarity)
-            where.rarity = rarity;
-        if (type)
-            where.OR = [{ type }, { secondaryType: type }];
-        if (search)
-            where.name = { contains: search, mode: 'insensitive' };
-        let orderBy = [
-            { marketPrice: 'desc' },
-        ];
-        switch (sort) {
-            case 'price-asc':
-                orderBy = [{ marketPrice: 'asc' }];
-                break;
-            case 'price-desc':
-                orderBy = [{ marketPrice: 'desc' }];
-                break;
-            case 'name-asc':
-                orderBy = [{ name: 'asc' }];
-                break;
-            case 'rarity-desc':
-                orderBy = [{ marketPrice: 'desc' }];
-                break;
-            case 'rarity-asc':
-                orderBy = [{ marketPrice: 'asc' }];
-                break;
+        let allCards = await this.poke.getCatalog();
+        if (rarity) {
+            allCards = allCards.filter((c) => c.rarity === rarity);
         }
-        const [total, cards] = await Promise.all([
-            this.prisma.card.count({ where }),
-            this.prisma.card.findMany({
-                where,
-                orderBy,
-                skip: (page - 1) * limit,
-                take: limit,
-            }),
-        ]);
-        const mapped = cards.map((c) => this.poke.rowToPokeCard(c));
+        if (type) {
+            allCards = allCards.filter((c) => c.type === type || c.secondaryType === type);
+        }
+        if (search) {
+            const s = search.toLowerCase();
+            allCards = allCards.filter((c) => c.name.toLowerCase().includes(s));
+        }
+        allCards.sort((a, b) => {
+            switch (sort) {
+                case 'price-asc':
+                    return a.marketPrice - b.marketPrice;
+                case 'price-desc':
+                    return b.marketPrice - a.marketPrice;
+                case 'name-asc':
+                    return a.name.localeCompare(b.name);
+                case 'rarity-desc':
+                    return b.marketPrice - a.marketPrice;
+                case 'rarity-asc':
+                    return a.marketPrice - b.marketPrice;
+                default:
+                    return 0;
+            }
+        });
+        const total = allCards.length;
+        const startIndex = (page - 1) * limit;
+        const paginatedCards = allCards.slice(startIndex, startIndex + limit);
         return {
             count: total,
             page,
             limit,
             totalPages: Math.ceil(total / limit),
-            cards: mapped,
+            cards: paginatedCards,
         };
     }
     async listTrending() {

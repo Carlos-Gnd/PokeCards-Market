@@ -24,17 +24,17 @@ export declare class CardsService {
     getOne(tcgId: string): Promise<PokeCard>;
     ensureInDb(tcgId: string): Promise<{
         id: bigint;
-        createdAt: Date;
-        updatedAt: Date;
+        tcgId: string | null;
+        pokemonId: number;
         name: string;
-        rarity: string;
         type: string;
         secondaryType: string | null;
-        pokemonId: number;
-        tcgId: string | null;
+        rarity: string;
         variant: string;
         imageUrl: string;
         marketPrice: Prisma.Decimal;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     toPublic(card: PokeCard): PokeCard;
 }

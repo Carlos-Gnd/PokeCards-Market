@@ -22,53 +22,52 @@ export class CardsService {
   }) {
     const { page, limit, rarity, type, search, sort } = q;
 
-    // Construir filtro WHERE dinámico
-    const where: Prisma.CardWhereInput = {};
-    if (rarity) where.rarity = rarity;
-    if (type) where.OR = [{ type }, { secondaryType: type }];
-    if (search) where.name = { contains: search, mode: 'insensitive' };
+    // 1. Traer todo el catálogo (súper rápido porque está cacheado y lee de cartas_pokemon)
+    let allCards = await this.poke.getCatalog();
 
-    // Construir ORDER BY
-    let orderBy: Prisma.CardOrderByWithRelationInput[] = [
-      { marketPrice: 'desc' },
-    ];
-    switch (sort) {
-      case 'price-asc':
-        orderBy = [{ marketPrice: 'asc' }];
-        break;
-      case 'price-desc':
-        orderBy = [{ marketPrice: 'desc' }];
-        break;
-      case 'name-asc':
-        orderBy = [{ name: 'asc' }];
-        break;
-      case 'rarity-desc':
-        orderBy = [{ marketPrice: 'desc' }];
-        break;
-      case 'rarity-asc':
-        orderBy = [{ marketPrice: 'asc' }];
-        break;
+    // 2. Aplicar los filtros de la UI
+    if (rarity) {
+      allCards = allCards.filter((c) => c.rarity === rarity);
+    }
+    if (type) {
+      allCards = allCards.filter(
+        (c) => c.type === type || c.secondaryType === type,
+      );
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      allCards = allCards.filter((c) => c.name.toLowerCase().includes(s));
     }
 
-    const [total, cards] = await Promise.all([
-      this.prisma.card.count({ where }), // Ya no necesita "as any"
-      this.prisma.card.findMany({
-        where, // Ya no necesita "as any"
-        orderBy, // Ya no necesita "as any"
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    ]);
+    // 3. Aplicar el ordenamiento
+    allCards.sort((a, b) => {
+      switch (sort) {
+        case 'price-asc':
+          return a.marketPrice - b.marketPrice;
+        case 'price-desc':
+          return b.marketPrice - a.marketPrice;
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'rarity-desc':
+          return b.marketPrice - a.marketPrice; // Usamos precio como proxy de rareza
+        case 'rarity-asc':
+          return a.marketPrice - b.marketPrice;
+        default:
+          return 0;
+      }
+    });
 
-    // Mapear al shape público que ya espera el frontend
-    const mapped = cards.map((c) => this.poke.rowToPokeCard(c));
+    // 4. Recortar el array para la paginación exacta
+    const total = allCards.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedCards = allCards.slice(startIndex, startIndex + limit);
 
     return {
       count: total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      cards: mapped,
+      cards: paginatedCards,
     };
   }
 
