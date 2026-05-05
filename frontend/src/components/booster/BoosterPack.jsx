@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import "../../styles/booster.css";
+import { api } from '../../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -195,16 +196,7 @@ export default function BoosterPack({ userId = null }) {
 
   const handleCreateOrder = useCallback(async () => {
     setError(null);
-    const res = await fetch(`${API_URL}/api/booster/create-order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `HTTP ${res.status}`);
-    }
-    const data = await res.json();
+    const { data } = await api.post("/booster/create-order", {});
     return data.paypalOrderId;
   }, []);
 
@@ -442,7 +434,6 @@ export default function BoosterPack({ userId = null }) {
                           setZoomed(card);
                         }
                       }}
-                      
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
