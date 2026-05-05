@@ -12,21 +12,10 @@
   max-width: 160px;
   aspect-ratio: 245 / 342;
   transform-style: preserve-3d;
-  transition:
-    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.24s ease;
+  /* Borramos el 'filter' de la transición para no romper el 3D */
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   will-change: transform;
-}
-
-.bp-flip-card:hover {
-  filter: drop-shadow(0 18px 30px rgba(53, 200, 255, 0.16));
-}
-
-
-.bp-flip-card.is-flipped:hover {
-  /* Ligera elevación sobre el eje Y ya girado  */
-  filter: drop-shadow(0 22px 40px rgba(53, 200, 255, 0.25));
 }
 
 .bp-flip-card.is-flipped {
@@ -41,6 +30,17 @@
   -webkit-backface-visibility: hidden;
   overflow: hidden;
   box-shadow: 0 14px 40px -16px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  /* Pasamos la transición de sombra directamente a las caras */
+  transition: box-shadow 0.24s ease;
+}
+
+/* Aplicamos el brillo al hover usando box-shadow en las caras en lugar de filter en el padre */
+.bp-flip-card:hover .bp-flip-face {
+  box-shadow: 0 18px 30px rgba(53, 200, 255, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.bp-flip-card.is-flipped:hover .bp-flip-face {
+  box-shadow: 0 22px 40px rgba(53, 200, 255, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .bp-flip-back {
