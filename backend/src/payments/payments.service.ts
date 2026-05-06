@@ -1,3 +1,6 @@
+// ── backend/src/payments/payments.service.ts — v2.0 ──────────────────────────
+// Eliminados todos los $executeRaw a colecciones_usuario.
+// La transacción atómica sólo escribe en orders + user_cards (Prisma SSOT).
 import {
   BadRequestException,
   ConflictException,
@@ -23,11 +26,13 @@ export class PaymentsService {
     private readonly paypal: PaypalClient,
   ) {}
 
-  /** Crea una orden de PayPal a partir del tcgId (ej. "sv3pt5-12"). Devuelve { paypalOrderId, approveUrl, ... }. */
+  // ── createOrder ───────────────────────────────────────────────────────────
+
+  /** Crea una orden de PayPal a partir del tcgId (ej. "sv4pt5-25"). */
   async createOrder(userId: string, tcgId: string) {
     const card = await this.cards.ensureInDb(tcgId);
 
-    // Validar que el usuario no posea ya esta carta
+    // El usuario no puede comprar una carta que ya posee
     const owned = await this.prisma.userCard.findUnique({
       where: { userId_cardId: { userId, cardId: card.id } },
     });
@@ -41,7 +46,7 @@ export class PaymentsService {
     try {
       orderCreated = await this.paypal.createOrder(
         Number(amount),
-        `arcadium_${card.pokemonId}`,
+        `arcadium_${card.tcgId}`,
         `ARCADIUM · ${card.name} (${card.rarity}/${card.variant})`,
       );
     } catch (err: unknown) {
@@ -50,7 +55,6 @@ export class PaymentsService {
       throw new BadRequestException('No se pudo crear la orden de PayPal');
     }
 
-    // Persistir la intención de compra
     await this.prisma.order.create({
       data: {
         userId,
@@ -66,7 +70,6 @@ export class PaymentsService {
       approveUrl: orderCreated.approveUrl,
       amount,
       card: {
-        id: Number(card.id),
         pokemonId: card.pokemonId,
         tcgId: card.tcgId,
         name: card.name,
@@ -76,28 +79,7 @@ export class PaymentsService {
     };
   }
 
-  /** Serializa un UserCard para respuestas públicas (convierte BigInt → number). */
-  private toPublicUserCard(userCard: UserCardWithCard) {
-    return {
-      id: userCard.id,
-      quantity: userCard.quantity,
-      obtainedFrom: userCard.obtainedFrom,
-      acquiredAt: userCard.createdAt,
-      cardId: Number(userCard.cardId),
-      card: {
-        id: Number(userCard.card.id),
-        pokemonId: userCard.card.pokemonId,
-        tcgId: userCard.card.tcgId,
-        name: userCard.card.name,
-        type: userCard.card.type,
-        secondaryType: userCard.card.secondaryType,
-        rarity: userCard.card.rarity,
-        variant: userCard.card.variant,
-        imageUrl: userCard.card.imageUrl,
-        marketPrice: Number(userCard.card.marketPrice),
-      },
-    };
-  }
+  // ── captureOrder ──────────────────────────────────────────────────────────
 
   /** Captura el pago en PayPal y desbloquea la carta para el usuario. */
   async captureOrder(userId: string, paypalOrderId: string) {
@@ -109,7 +91,7 @@ export class PaymentsService {
       throw new BadRequestException('Esta orden no pertenece al usuario');
     }
 
-    // Idempotencia: ya fue capturada antes
+    // Idempotencia — ya fue capturada antes
     if (order.status === 'COMPLETED') {
       const userCard = await this.prisma.userCard.findUnique({
         where: { userId_cardId: { userId, cardId: order.cardId } },
@@ -147,7 +129,7 @@ export class PaymentsService {
       );
     }
 
-    // Validación: el monto capturado debe coincidir con el de la orden
+    // Validación de monto
     if (
       capturedAmount !== null &&
       Math.abs(capturedAmount - Number(order.amount)) > 0.01
@@ -160,7 +142,7 @@ export class PaymentsService {
       );
     }
 
-    // Transacción atómica: marca COMPLETED + crea user_card + refleja en colecciones_usuario
+    // ✅ v2.0 — Transacción atómica sin legacy inserts
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedOrder = await tx.order.update({
         where: { paypalOrderId },
@@ -169,10 +151,7 @@ export class PaymentsService {
 
       const userCard = await tx.userCard.upsert({
         where: { userId_cardId: { userId, cardId: order.cardId } },
-        update: {
-          quantity: { increment: 1 },
-          orderId: updatedOrder.id,
-        },
+        update: { quantity: { increment: 1 }, orderId: updatedOrder.id },
         create: {
           userId,
           cardId: order.cardId,
@@ -181,26 +160,6 @@ export class PaymentsService {
         },
         include: { card: true },
       });
-
-      // Reflejo en tabla legacy (colecciones_usuario) para el módulo de booster
-      // Usa tcgId real (ej. "sv3pt5-12") en lugar de reconstruirlo desde pokemonId
-      const cartaPokemonId = userCard.card.tcgId ?? `sv3pt5-${userCard.card.pokemonId}`;
-      await tx.$executeRaw`
-        INSERT INTO colecciones_usuario (user_id, carta_id, paypal_order_id, obtenida_de)
-        SELECT
-          ${userId}::varchar,
-          ${cartaPokemonId}::varchar,
-          ${paypalOrderId}::varchar,
-          'marketplace'
-        WHERE EXISTS (
-          SELECT 1 FROM cartas_pokemon WHERE id = ${cartaPokemonId}
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM colecciones_usuario
-          WHERE user_id = ${userId}::varchar
-            AND paypal_order_id = ${paypalOrderId}::varchar
-        )
-      `;
 
       return { updatedOrder, userCard };
     });
@@ -212,6 +171,8 @@ export class PaymentsService {
       userCard: this.toPublicUserCard(result.userCard),
     };
   }
+
+  // ── history ───────────────────────────────────────────────────────────────
 
   async history(userId: string) {
     const orders = await this.prisma.order.findMany({
@@ -228,8 +189,8 @@ export class PaymentsService {
       updatedAt: o.updatedAt,
       cardId: Number(o.cardId),
       card: {
-        id: Number(o.card.id),
         pokemonId: o.card.pokemonId,
+        tcgId: o.card.tcgId,
         name: o.card.name,
         type: o.card.type,
         rarity: o.card.rarity,
@@ -238,5 +199,36 @@ export class PaymentsService {
         marketPrice: Number(o.card.marketPrice),
       },
     }));
+  }
+
+  // ── Helpers privados ──────────────────────────────────────────────────────
+
+  /** Serializa un UserCard para respuestas públicas (convierte BigInt → number). */
+  private toPublicUserCard(userCard: UserCardWithCard) {
+    return {
+      id: userCard.id,
+      quantity: userCard.quantity,
+      obtainedFrom: userCard.obtainedFrom,
+      acquiredAt: userCard.createdAt,
+      cardId: Number(userCard.cardId),
+      card: {
+        pokemonId: userCard.card.pokemonId,
+        tcgId: userCard.card.tcgId,
+        setId: userCard.card.setId,
+        name: userCard.card.name,
+        type: userCard.card.type,
+        secondaryType: userCard.card.secondaryType,
+        rarity: userCard.card.rarity,
+        variant: userCard.card.variant,
+        imageUrl: userCard.card.imageUrl,
+        marketPrice: Number(userCard.card.marketPrice),
+        stats: {
+          hp: userCard.card.hp,
+          attack: userCard.card.attack,
+          defense: userCard.card.defense,
+          speed: userCard.card.speed,
+        },
+      },
+    };
   }
 }

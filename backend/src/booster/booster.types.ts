@@ -1,30 +1,24 @@
+// ── backend/src/booster/booster.types.ts — v2.0 ──────────────────────────────
+// Las interfaces legacy CartasPokemonRow / ColeccionesUsuarioIdRow se eliminan.
+// BoosterCard ahora refleja el shape de la tabla `cards` gestionada por Prisma.
+
 /**
- * Carta tal como viene de la tabla `cartas_pokemon` (legacy express-api schema).
- * Esta tabla NO está en el schema Prisma — se accede con $queryRaw.
+ * Carta tal como se expone en un booster pack.
+ * Coincide 1:1 con PokeCard para que el frontend no necesite cambios.
  */
 export interface BoosterCard {
-  id: string;
+  tcgId: string; // tcgId  (ej. "sv4pt5-25")
+  setId: string;
   nombre: string;
-  pokedexNumero: number | null;
-  rareza: string | null;
-  tipo: string | null;
-  imagenSmall: string | null;
-  imagenLarge: string | null;
+  pokemonId: number;
+  rareza: string; // tier interno (core, alloy, prime…)
+  rarityLabel: string;
+  tipo: string;
+  imagenSmall: string;
+  imagenLarge: string;
   precioMercado: number;
+  stats: { hp: number; attack: number; defense: number; speed: number };
   esRara: boolean;
-}
-
-/** Shape crudo de una fila de `cartas_pokemon` devuelta por $queryRaw. */
-export interface CartasPokemonRow {
-  id: string;
-  nombre: string;
-  pokedex_numero: number | null;
-  rareza: string | null;
-  tipo: string | null;
-  imagen_small: string | null;
-  imagen_large: string | null;
-  /** Prisma devuelve Decimal como string cuando viene de $queryRaw. */
-  precio_mercado: string | number;
 }
 
 /** Respuesta del endpoint de abrir sobre. */
@@ -41,9 +35,4 @@ export interface BoosterCaptureResult extends BoosterPack {
   paypalOrderId: string;
   persisted: boolean;
   alreadyCaptured?: boolean;
-}
-
-/** Fila de idempotencia en colecciones_usuario. */
-export interface ColeccionesUsuarioIdRow {
-  carta_id: string;
 }

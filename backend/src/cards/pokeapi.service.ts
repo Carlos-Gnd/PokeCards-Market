@@ -1,11 +1,17 @@
+// ── backend/src/cards/pokeapi.service.ts ─────────────────────────────────────
+// v2.0 — Lee el catálogo desde la tabla `cards` (Prisma SSOT).
+// Las tablas legacy cartas_pokemon / colecciones_usuario ya no existen.
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { variantFor } from './rarity.util';
 import type { RarityTier } from './rarity.util';
+import type { Card } from '@prisma/client';
+
+// ── Interfaces públicas ───────────────────────────────────────────────────────
 
 export interface PokeCard {
   pokemonId: number;
   tcgId: string;
+  setId: string;
   name: string;
   type: string;
   secondaryType: string | null;
@@ -20,16 +26,7 @@ export interface PokeCard {
   abilities: string[];
 }
 
-interface CartaPokemonRow {
-  id: string;
-  nombre: string;
-  pokedex_numero: number | null;
-  rareza: string | null;
-  tipo: string | null;
-  imagen_small: string | null;
-  imagen_large: string | null;
-  precio_mercado: string | number;
-}
+// ── Mapas de rareza ───────────────────────────────────────────────────────────
 
 const RARITY_TO_TIER: Record<string, { tier: RarityTier; label: string }> = {
   // Scarlet & Violet era
@@ -74,22 +71,13 @@ const TIER_ORDER: Record<RarityTier, number> = {
   core: 1,
 };
 
-function det01(seed: number): number {
-  let t = (seed + 0x6d2b79f5) >>> 0;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
-
-function pokemonIdFromCardId(cardId: string): number {
-  const tail = cardId.split('-').pop();
-  const n = tail ? Number.parseInt(tail, 10) : NaN;
-  return Number.isFinite(n) ? n : 0;
-}
+// ── Servicio ──────────────────────────────────────────────────────────────────
 
 /**
- * Catálogo de cartas alimentado desde la tabla `cartas_pokemon` (Supabase).
- * Mantiene el shape `PokeCard` para compatibilidad con el frontend ARCADIUM.
+ * Catálogo de cartas alimentado desde la tabla `cards` gestionada por Prisma.
+ * Mantiene el shape `PokeCard` para compatibilidad con el resto del sistema.
+ *
+ * v2.0: ya no accede a `cartas_pokemon` — Prisma es el único dueño de la BD.
  */
 @Injectable()
 export class PokeapiService {
@@ -97,50 +85,64 @@ export class PokeapiService {
   private cache: PokeCard[] | null = null;
   private cacheAt = 0;
   private inflightCatalog: Promise<PokeCard[]> | null = null;
-  private readonly TTL_MS = 1000 * 60 * 5; // 5 min — la tabla puede cambiar
+  private readonly TTL_MS = 1000 * 60 * 5; // 5 min
 
   constructor(private readonly prisma: PrismaService) {}
+
+  // ── Cache management ────────────────────────────────────────────────────────
 
   invalidate() {
     this.cache = null;
     this.cacheAt = 0;
   }
 
-  private mapRow(row: CartaPokemonRow): PokeCard {
-    const pokemonId = pokemonIdFromCardId(row.id);
-    const tierInfo: { tier: RarityTier; label: string } = (row.rareza
-      ? RARITY_TO_TIER[row.rareza]
-      : undefined) ?? {
-      tier: 'core',
-      label: row.rareza ?? 'Sin clasificar',
-    };
-    const variant = variantFor(pokemonId, tierInfo.tier);
-    const seed = pokemonId || row.id.length;
-    const stats = {
-      hp: 50 + Math.floor(det01(seed * 7) * 200),
-      attack: 40 + Math.floor(det01(seed * 11) * 130),
-      defense: 40 + Math.floor(det01(seed * 13) * 110),
-      speed: 30 + Math.floor(det01(seed * 17) * 130),
+  // ── Mapper (Prisma Card → PokeCard) ─────────────────────────────────────────
+
+  /**
+   * Convierte un registro `Card` de Prisma al shape público `PokeCard`.
+   * Los stats ahora vienen directamente de la BD — no se calculan on-the-fly.
+   */
+  rowToPokeCard(row: Card): PokeCard {
+    const mp =
+      typeof row.marketPrice === 'object' && 'toNumber' in row.marketPrice
+        ? (row.marketPrice as { toNumber(): number }).toNumber()
+        : Number(row.marketPrice);
+
+    const tierInfo = RARITY_TO_TIER[row.rarity] ?? {
+      tier: 'core' as const,
+      label: row.rarity,
     };
 
     return {
-      pokemonId,
-      tcgId: row.id,
-      name: row.nombre,
-      type: row.tipo ?? 'Colorless',
-      secondaryType: null,
+      pokemonId: row.pokemonId,
+      tcgId: row.tcgId,
+      setId: row.setId,
+      name: row.name,
+      type: row.type,
+      secondaryType: row.secondaryType,
       rarity: tierInfo.tier,
       rarityLabel: tierInfo.label,
-      variant,
-      imageUrl: row.imagen_large ?? row.imagen_small ?? '',
-      marketPrice: Number(row.precio_mercado),
-      stats,
+      variant: row.variant,
+      imageUrl: row.imageUrl,
+      marketPrice: mp,
+      stats: {
+        hp: row.hp,
+        attack: row.attack,
+        defense: row.defense,
+        speed: row.speed,
+      },
       height: 0,
       weight: 0,
       abilities: [],
     };
   }
 
+  // ── Catálogo ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Devuelve el catálogo completo de cartas desde la tabla `cards`.
+   * Cacheado 5 minutos en memoria para evitar N queries por petición.
+   */
   async getCatalog(): Promise<PokeCard[]> {
     const now = Date.now();
     if (this.cache && now - this.cacheAt < this.TTL_MS) return this.cache;
@@ -148,24 +150,26 @@ export class PokeapiService {
 
     this.inflightCatalog = (async () => {
       const t0 = Date.now();
-      const rows = await this.prisma.$queryRaw<CartaPokemonRow[]>`
-        SELECT id, nombre, pokedex_numero, rareza, tipo, imagen_small, imagen_large, precio_mercado
-        FROM cartas_pokemon
-      `;
-      const cards = rows.map((r) => this.mapRow(r));
 
+      // ✅ v2.0 — Prisma ORM, no $queryRaw ni cartas_pokemon
+      const rows = await this.prisma.card.findMany({
+        orderBy: [{ marketPrice: 'desc' }],
+      });
+
+      const cards = rows.map((r) => this.rowToPokeCard(r));
+
+      // Ordenar por tier de rareza → precio como desempate
       cards.sort((a, b) => {
         const r =
           (TIER_ORDER[b.rarity as RarityTier] ?? 0) -
           (TIER_ORDER[a.rarity as RarityTier] ?? 0);
-        if (r !== 0) return r;
-        return b.marketPrice - a.marketPrice;
+        return r !== 0 ? r : b.marketPrice - a.marketPrice;
       });
 
       this.cache = cards;
       this.cacheAt = Date.now();
       this.logger.log(
-        `Catálogo cargado desde Supabase: ${cards.length} cartas en ${Date.now() - t0}ms`,
+        `Catálogo cargado desde Prisma (cards): ${cards.length} cartas en ${Date.now() - t0}ms`,
       );
       return cards;
     })();
@@ -178,7 +182,7 @@ export class PokeapiService {
   }
 
   async warmup() {
-    this.getCatalog().catch((err) =>
+    await this.getCatalog().catch((err: Error) =>
       this.logger.warn(`Warmup falló: ${err.message}`),
     );
   }
@@ -186,49 +190,5 @@ export class PokeapiService {
   async findOne(tcgId: string): Promise<PokeCard | null> {
     const cat = await this.getCatalog();
     return cat.find((c) => c.tcgId === tcgId) ?? null;
-  }
-
-  /**
-   * Convierte una fila de la tabla `Card` de Prisma al shape `PokeCard`.
-   * Necesario para que CardsService.listPaginated() pueda mapear rows de BD.
-   */
-  rowToPokeCard(row: {
-    pokemonId: number;
-    tcgId: string | null;
-    name: string;
-    type: string;
-    secondaryType: string | null;
-    rarity: string;
-    variant: string;
-    imageUrl: string;
-    marketPrice: string | number | { toNumber(): number };
-  }): PokeCard {
-    const mp =
-      typeof row.marketPrice === 'object' && 'toNumber' in row.marketPrice
-        ? row.marketPrice.toNumber()
-        : Number(row.marketPrice);
-
-    const tierInfo = RARITY_TO_TIER[row.rarity] ?? {
-      tier: 'core' as const,
-      label: row.rarity,
-    };
-
-    return {
-      pokemonId: row.pokemonId,
-      tcgId: row.tcgId ?? `legacy-${row.pokemonId}`,
-      name: row.name,
-      type: row.type,
-      secondaryType: row.secondaryType,
-      rarity: tierInfo.tier,
-      rarityLabel: tierInfo.label,
-      variant: row.variant,
-      imageUrl: row.imageUrl,
-      marketPrice: mp,
-      // Stats no almacenadas en BD — valores por defecto seguros
-      stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
-      height: 0,
-      weight: 0,
-      abilities: [],
-    };
   }
 }

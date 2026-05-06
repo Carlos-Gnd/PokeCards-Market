@@ -1,6 +1,7 @@
 export interface ArcadiumCard {
   pokemonId: number;
   tcgId: string;
+  setId: string; // para los filtros de expansiones
   name: string;
   type: string;
   secondaryType: string | null;
@@ -21,14 +22,14 @@ export interface ArcadiumCard {
 }
 
 export interface UserCardEntry {
-  id: string;
+  id: string; // Este es el UUID de la compra en la tabla user_cards, se queda igual
   quantity: number;
   obtainedFrom: string;
   acquiredAt: string;
   card: {
-    id: number;
     pokemonId: number;
-    tcgId: string | null;
+    tcgId: string;
+    setId: string;
     name: string;
     type: string;
     secondaryType: string | null;
@@ -44,9 +45,9 @@ export interface CreateOrderResponse {
   approveUrl?: string;
   amount: string;
   card: {
-    id: number;
     pokemonId: number;
-    tcgId: string | null;
+    tcgId: string;
+    setId: string;
     name: string;
     rarity: string;
     variant: string;

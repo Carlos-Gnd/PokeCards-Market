@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual"; 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { fetchCatalogAll } from "../services/cards.service"; // usa cache
 import { Card } from "../components/card";
 import { FullscreenLoader } from "../components/ui/Spinner";
@@ -19,6 +19,19 @@ const CardDetailModal = lazy(() =>
   })),
 );
 
+// Nombres amigables para las expansiones
+const SET_NAMES: Record<string, string> = {
+  base1: "Base Set",
+  base3: "Fossil",
+  sv3: "Obsidian Flames",
+  sv3pt5: "Pokémon 151",
+  sv4pt5: "Paldean Fates",
+  sv8: "Surging Sparks",
+  sv8pt5: "Prismatic Evolutions",
+  swsh7: "Evolving Skies",
+  swsh12pt5: "Crown Zenith",
+};
+
 const RARITY_OPTIONS = [
   "core",
   "alloy",
@@ -28,6 +41,7 @@ const RARITY_OPTIONS = [
   "ascendant",
   "eternal",
 ] as const;
+
 const SORT_OPTIONS = [
   { v: "rarity-desc", label: "Rareza (mayor)" },
   { v: "rarity-asc", label: "Rareza (menor)" },
@@ -68,12 +82,8 @@ function useColumnCount(): number {
 }
 
 // ── Altura estimada de cada fila del grid (card + gap vertical) ───────────────
-// FIX BUG 6 (grid pegado): El gap-y-7 de Tailwind equivale a 28px (7 * 4px).
-// El virtualizador usa posición absoluta y no suma los gaps del CSS,
-// por lo que la altura estimada DEBE incluir el gap para que las filas
-// no se solapen. 320px (carta) + 28px (gap) = 348px.
-const CARD_HEIGHT = 320;   // px — altura de la carta
-const ROW_GAP = 28;        // px — equivale a gap-y-7 (7 * 4 = 28)
+const CARD_HEIGHT = 320; // px — altura de la carta
+const ROW_GAP = 28; // px — equivale a gap-y-7 (7 * 4 = 28)
 const CARD_ROW_HEIGHT = CARD_HEIGHT + ROW_GAP;
 
 export function MarketplacePage() {
@@ -83,9 +93,12 @@ export function MarketplacePage() {
   const [cards, setCards] = useState<ArcadiumCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState(""); // valor del <input>
+
+  // Estados de filtros
+  const [searchInput, setSearchInput] = useState("");
   const [rarities, setRarities] = useState<Set<string>>(new Set());
   const [types, setTypes] = useState<Set<string>>(new Set());
+  const [sets, setSets] = useState<Set<string>>(new Set()); // NUEVO: Filtro de expansiones
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [sort, setSort] = useState<SortValue>("rarity-desc");
   const [selected, setSelected] = useState<ArcadiumCard | null>(null);
@@ -95,8 +108,6 @@ export function MarketplacePage() {
   const search = useDebounce(searchInput, 300);
 
   const cols = useColumnCount();
-
-  // ── Contenedor de scroll para el virtualizador ───────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ── Carga inicial (usa cache de sessionStorage) ──────────────────────────
@@ -140,6 +151,18 @@ export function MarketplacePage() {
     return Array.from(s).sort();
   }, [cards]);
 
+  // ── Lista de Expansiones disponibles ─────────────────────────────────────
+  const allSets = useMemo(() => {
+    const s = new Set<string>();
+    cards.forEach((c) => {
+      if (c.setId) s.add(c.setId);
+    });
+    // Ordenar alfabéticamente por el nombre amigable
+    return Array.from(s).sort((a, b) =>
+      (SET_NAMES[a] || a).localeCompare(SET_NAMES[b] || b),
+    );
+  }, [cards]);
+
   // ── Filtrado (depende del search DEBOUNCED) ──────────────────────────────
   const filtered = useMemo(() => {
     let out = cards;
@@ -153,9 +176,10 @@ export function MarketplacePage() {
         (c) =>
           types.has(c.type) || (c.secondaryType && types.has(c.secondaryType)),
       );
+    if (sets.size) out = out.filter((c) => sets.has(c.setId)); // Aplicar filtro de expansión
     if (onlyAvailable) out = out.filter((c) => !ownedIds.has(c.tcgId));
     return out;
-  }, [cards, search, rarities, types, onlyAvailable, ownedIds]);
+  }, [cards, search, rarities, types, sets, onlyAvailable, ownedIds]);
 
   // ── Ordenado (memo separado para no re-clonar al filtrar) ───────────────
   const sorted = useMemo(() => {
@@ -194,29 +218,29 @@ export function MarketplacePage() {
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    // FIX BUG 6: estimateSize incluye el gap vertical para evitar solapamiento
     estimateSize: () => CARD_ROW_HEIGHT,
-    overscan: 3, // pre-renderiza 3 filas arriba y abajo del viewport
+    overscan: 3,
   });
 
   const toggleSet = (
-  set: Set<string>,
-  value: string,
-  setter: (s: Set<string>) => void,
-) => {
-  const next = new Set(set);
-  if (next.has(value)) {
-    next.delete(value);
-  } else {
-    next.add(value);
-  }
-  setter(next);
-};
+    set: Set<string>,
+    value: string,
+    setter: (s: Set<string>) => void,
+  ) => {
+    const next = new Set(set);
+    if (next.has(value)) {
+      next.delete(value);
+    } else {
+      next.add(value);
+    }
+    setter(next);
+  };
 
   const clearFilters = () => {
     setSearchInput("");
     setRarities(new Set());
     setTypes(new Set());
+    setSets(new Set());
     setOnlyAvailable(false);
     setSort("rarity-desc");
   };
@@ -224,6 +248,7 @@ export function MarketplacePage() {
   const activeFilters =
     rarities.size +
     types.size +
+    sets.size +
     (onlyAvailable ? 1 : 0) +
     (searchInput ? 1 : 0);
 
@@ -268,10 +293,10 @@ export function MarketplacePage() {
           />
           <input
             type="text"
-            placeholder="Buscar por nombre…"
+            placeholder="Buscar Pokémon por nombre…"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)} // input no debounced
-            className="input pl-10"
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="input pl-10 w-full"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -304,56 +329,85 @@ export function MarketplacePage() {
         </div>
       </div>
 
-      {/* Filtros expandibles (sin cambios visuales) */}
+      {/* Filtros expandibles */}
       {filtersOpen && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="mb-8 p-5 rounded-2xl glass space-y-4 overflow-hidden"
+          className="mb-8 p-5 rounded-2xl glass space-y-5 overflow-hidden"
         >
+          {/* Expansión */}
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-white/55 mb-2">
-              Rareza
+              Expansión
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {RARITY_OPTIONS.map((r) => (
+              {allSets.map((s) => (
                 <button
-                  key={r}
-                  onClick={() => toggleSet(rarities, r, setRarities)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider border transition-all",
-                    rarities.has(r)
-                      ? "bg-primary/20 border-primary/60 text-white"
-                      : "bg-white/[0.03] border-white/10 text-white/65 hover:bg-white/[0.06]",
-                  )}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/55 mb-2">
-              Tipo
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {allTypes.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => toggleSet(types, t, setTypes)}
+                  key={s}
+                  onClick={() => toggleSet(sets, s, setSets)}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                    types.has(t)
-                      ? "bg-accent/20 border-accent/60 text-white"
+                    sets.has(s)
+                      ? "bg-secondary/20 border-secondary/60 text-white"
                       : "bg-white/[0.03] border-white/10 text-white/65 hover:bg-white/[0.06]",
                   )}
                 >
-                  {t}
+                  {SET_NAMES[s] || s}
                 </button>
               ))}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Rareza */}
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/55 mb-2">
+                Rareza
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {RARITY_OPTIONS.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => toggleSet(rarities, r, setRarities)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider border transition-all",
+                      rarities.has(r)
+                        ? "bg-primary/20 border-primary/60 text-white"
+                        : "bg-white/[0.03] border-white/10 text-white/65 hover:bg-white/[0.06]",
+                    )}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/55 mb-2">
+                Tipo
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {allTypes.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => toggleSet(types, t, setTypes)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                      types.has(t)
+                        ? "bg-accent/20 border-accent/60 text-white"
+                        : "bg-white/[0.03] border-white/10 text-white/65 hover:bg-white/[0.06]",
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/[0.06]">
             {user && (
               <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -398,20 +452,6 @@ export function MarketplacePage() {
             {cards.length} cartas
           </p>
 
-          {/*
-            ── GRID VIRTUALIZADO ────────────────────────────────────────────
-            scrollRef es el contenedor con overflow-y: auto.
-            El virtualizador solo monta en el DOM las filas visibles (~3-6).
-            El div interior tiene la altura total del contenido para que la
-            barra de scroll sea proporcional al número real de cartas.
-
-            FIX BUG 6: Cada fila tiene height: CARD_HEIGHT (320px) en lugar
-            de virtualRow.size (348px). El gap entre filas se obtiene sumando
-            paddingBottom = ROW_GAP al div de fila. De esta forma:
-            - El virtualizer calcula posiciones correctas con estimateSize=348px
-            - Cada fila ocupa 320px + 28px de padding-bottom = 348px reales
-            - No hay solapamiento ni espacio perdido
-          */}
           <div
             ref={scrollRef}
             style={{ height: "80vh", overflowY: "auto" }}
@@ -434,15 +474,12 @@ export function MarketplacePage() {
                       top: virtualRow.start,
                       left: 0,
                       width: "100%",
-                      // FIX: La fila tiene la altura de la carta, el gap
-                      // se añade como padding-bottom para que el próximo
-                      // virtualRow.start quede bien posicionado
                       height: CARD_HEIGHT,
                       paddingBottom: ROW_GAP,
                       boxSizing: "content-box",
                       display: "grid",
                       gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                      gap: "0 1rem", // gap-x horizontal sí va en CSS (no afecta altura)
+                      gap: "0 1rem",
                     }}
                   >
                     {rowCards.map((card) => (
@@ -468,7 +505,6 @@ export function MarketplacePage() {
         </>
       )}
 
-      {/* Modal cargado de forma lazy */}
       <Suspense fallback={null}>
         <CardDetailModal
           card={selected}

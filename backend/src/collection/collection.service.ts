@@ -17,7 +17,6 @@ export class CollectionService {
       obtainedFrom: uc.obtainedFrom,
       acquiredAt: uc.createdAt,
       card: {
-        id: Number(uc.card.id),
         pokemonId: uc.card.pokemonId,
         tcgId: uc.card.tcgId,
         name: uc.card.name,

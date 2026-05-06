@@ -22,6 +22,7 @@ export class CardsController {
     @Query('type') type?: string,
     @Query('search') search?: string,
     @Query('sort') sort?: string,
+    @Query('setId') setId?: string,
   ) {
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const limit = Math.min(96, Math.max(12, parseInt(rawLimit, 10) || 48));
@@ -33,6 +34,7 @@ export class CardsController {
       type,
       search,
       sort,
+      setId,
     });
   }
 

@@ -1,4 +1,5 @@
-// ── backend/src/cards/cards.service.ts ───────────────────────────────────────
+// ── backend/src/cards/cards.service.ts — v2.0 ────────────────────────────────
+// ensureInDb ahora persiste setId, hp, attack, defense, speed.
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PokeapiService, PokeCard } from './pokeapi.service';
@@ -10,7 +11,8 @@ export class CardsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  // ── NUEVO: listado paginado y filtrado ────────────────────────────────────
+  // ── Listado paginado y filtrado ───────────────────────────────────────────
+
   async listPaginated(q: {
     page: number;
     limit: number;
@@ -18,15 +20,20 @@ export class CardsService {
     type?: string;
     search?: string;
     sort?: string;
+    setId?: string;
   }) {
-    const { page, limit, rarity, type, search, sort } = q;
+    const { page, limit, rarity, type, search, sort, setId } = q;
 
-    // 1. Traer todo el catálogo (súper rápido porque está cacheado y lee de cartas_pokemon)
     let allCards = await this.poke.getCatalog();
 
-    // 2. Aplicar los filtros de la UI
+    // Filtro por Expansión
+    if (setId) {
+      allCards = allCards.filter((c) => c.setId === setId);
+    }
     if (rarity) {
-      allCards = allCards.filter((c) => c.rarity === rarity);
+      allCards = allCards.filter(
+        (c) => c.rarity === rarity || c.rarityLabel === rarity,
+      );
     }
     if (type) {
       allCards = allCards.filter(
@@ -38,7 +45,6 @@ export class CardsService {
       allCards = allCards.filter((c) => c.name.toLowerCase().includes(s));
     }
 
-    // 3. Aplicar el ordenamiento
     allCards.sort((a, b) => {
       switch (sort) {
         case 'price-asc':
@@ -48,7 +54,7 @@ export class CardsService {
         case 'name-asc':
           return a.name.localeCompare(b.name);
         case 'rarity-desc':
-          return b.marketPrice - a.marketPrice; // Usamos precio como proxy de rareza
+          return b.marketPrice - a.marketPrice;
         case 'rarity-asc':
           return a.marketPrice - b.marketPrice;
         default:
@@ -56,7 +62,6 @@ export class CardsService {
       }
     });
 
-    // 4. Recortar el array para la paginación exacta
     const total = allCards.length;
     const startIndex = (page - 1) * limit;
     const paginatedCards = allCards.slice(startIndex, startIndex + limit);
@@ -70,14 +75,15 @@ export class CardsService {
     };
   }
 
-  // ── NUEVO: trending (8 cartas de mayor precio) ────────────────────────────
+  // ── Trending (8 cartas de mayor precio) ──────────────────────────────────
+
   async listTrending(): Promise<PokeCard[]> {
     const allCards = await this.poke.getCatalog();
-    const sorted = [...allCards].sort((a, b) => b.marketPrice - a.marketPrice);
-    return sorted.slice(0, 8);
+    return [...allCards]
+      .sort((a, b) => b.marketPrice - a.marketPrice)
+      .slice(0, 8);
   }
 
-  // ── Sin cambios desde aquí ────────────────────────────────────────────────
   async listAll() {
     return this.poke.getCatalog();
   }
@@ -88,12 +94,15 @@ export class CardsService {
     return card;
   }
 
+  // ── ensureInDb — Upsert SSOT ──────────────────────────────────────────────
   async ensureInDb(tcgId: string) {
     const card = await this.getOne(tcgId);
+
     return this.prisma.card.upsert({
       where: { tcgId: card.tcgId },
       update: {
         pokemonId: card.pokemonId,
+        setId: card.setId,
         name: card.name,
         type: card.type,
         secondaryType: card.secondaryType,
@@ -101,10 +110,15 @@ export class CardsService {
         variant: card.variant,
         imageUrl: card.imageUrl,
         marketPrice: card.marketPrice,
+        hp: card.stats.hp,
+        attack: card.stats.attack,
+        defense: card.stats.defense,
+        speed: card.stats.speed,
       },
       create: {
-        pokemonId: card.pokemonId,
         tcgId: card.tcgId,
+        pokemonId: card.pokemonId,
+        setId: card.setId,
         name: card.name,
         type: card.type,
         secondaryType: card.secondaryType,
@@ -112,6 +126,10 @@ export class CardsService {
         variant: card.variant,
         imageUrl: card.imageUrl,
         marketPrice: card.marketPrice,
+        hp: card.stats.hp,
+        attack: card.stats.attack,
+        defense: card.stats.defense,
+        speed: card.stats.speed,
       },
     });
   }

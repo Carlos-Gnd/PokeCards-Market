@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import "../../styles/booster.css";
-import { api } from '../../lib/api';
+import { api } from "../../lib/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -20,12 +20,12 @@ const LEGENDARY_RARITIES = new Set(["Special Illustration Rare", "Hyper Rare"]);
 
 function isHighRarity(card) {
   if (!card) return false;
-  if (HIGH_RARITIES.has(card.rareza)) return true;
-  return Number(card.precioMercado ?? 0) > 5;
+  if (HIGH_RARITIES.has(card.rarityLabel)) return true;
+  return Number(card.marketPrice ?? 0) > 5;
 }
 
-function rarityBadgeClass(rareza) {
-  switch (rareza) {
+function rarityBadgeClass(rarityLabel) {
+  switch (rarityLabel) {
     case "Special Illustration Rare":
     case "Hyper Rare":
       return "bg-gold/20 text-gold border-gold/40";
@@ -41,39 +41,18 @@ function rarityBadgeClass(rareza) {
   }
 }
 
-/**
- * Replica la función determinista del backend (PokeapiService.mapRow).
- * El backend genera stats con det01(seed * N), donde seed = pokemonId.
- * Como el frontend tiene pokemonId en BoosterCard.pokedexNumero, podemos
- * calcular exactamente los mismos valores sin llamada extra al servidor.
- */
-function det01(seed) {
-  let t = (seed + 0x6d2b79f5) >>> 0;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
-
-function calcStats(pokedexNumero) {
-  const seed = pokedexNumero || 1;
-  return {
-    hp: 50 + Math.floor(det01(seed * 7) * 200),
-    attack: 40 + Math.floor(det01(seed * 11) * 130),
-    defense: 40 + Math.floor(det01(seed * 13) * 110),
-    speed: 30 + Math.floor(det01(seed * 17) * 130),
-  };
-}
-
 // ── Modal de visualización en grande ─────────────────────────────────────────
 function CardZoomModal({ card, onClose }) {
   if (!card) return null;
-  const stats = calcStats(card.pokedexNumero);
+
+  // ¡USAMOS LOS STATS REALES DE LA BASE DE DATOS! 🚀
+  const stats = card.stats || { hp: 0, attack: 0, defense: 0, speed: 0 };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
       <motion.div
@@ -84,12 +63,11 @@ function CardZoomModal({ card, onClose }) {
         className="relative z-10 flex flex-col sm:flex-row items-center gap-6 max-w-2xl w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Imagen grande */}
         <div className="relative flex-shrink-0">
-          {card.imagenLarge ? (
+          {card.imageUrl ? (
             <img
-              src={card.imagenLarge}
-              alt={card.nombre}
+              src={card.imageUrl}
+              alt={card.name}
               className="w-64 sm:w-72 rounded-2xl shadow-2xl"
               style={{
                 boxShadow: isHighRarity(card)
@@ -102,27 +80,24 @@ function CardZoomModal({ card, onClose }) {
           )}
         </div>
 
-        {/* Datos de la carta */}
         <div className="flex-1 space-y-3">
           <div>
             <p className="font-display font-black text-2xl text-white leading-tight">
-              {card.nombre}
+              {card.name}
             </p>
-            {card.tipo && (
+            {card.type && (
               <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-md bg-white/10 border border-white/20 text-white/70">
-                {card.tipo}
+                {card.type}
               </span>
             )}
           </div>
 
-          {/* Rareza */}
           <div
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium ${rarityBadgeClass(card.rareza)}`}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium ${rarityBadgeClass(card.rarityLabel)}`}
           >
-            {card.rareza ?? "Sin clasificar"}
+            {card.rarityLabel ?? "Sin clasificar"}
           </div>
 
-          {/* Stats calculados igual que el backend */}
           <div className="grid grid-cols-2 gap-2">
             <StatRow label="HP" value={stats.hp} color="text-rose-400" />
             <StatRow
@@ -142,13 +117,12 @@ function CardZoomModal({ card, onClose }) {
             />
           </div>
 
-          {/* Precio */}
           <div className="flex items-center justify-between pt-2 border-t border-white/10">
             <span className="text-xs text-white/50 uppercase tracking-wider">
               Precio de mercado
             </span>
             <span className="font-mono font-bold text-gold">
-              ${Number(card.precioMercado ?? 0).toFixed(2)}
+              ${Number(card.marketPrice ?? 0).toFixed(2)}
             </span>
           </div>
 
@@ -184,7 +158,6 @@ export default function BoosterPack({ userId = null }) {
   const [flipped, setFlipped] = useState(new Set());
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  // estado para la carta que se ve en grande
   const [zoomed, setZoomed] = useState(null);
 
   const beginReveal = useCallback((fetched) => {
@@ -248,7 +221,6 @@ export default function BoosterPack({ userId = null }) {
 
   const handleFlip = useCallback((id) => {
     setFlipped((prev) => {
-      // Si ya está volteada, no hacer nada (la carta no se puede des-voltear).
       if (prev.has(id)) return prev;
       const next = new Set(prev);
       next.add(id);
@@ -266,7 +238,7 @@ export default function BoosterPack({ userId = null }) {
   }, []);
 
   const flipAll = useCallback(() => {
-    setFlipped(new Set(cards.map((c) => c.id)));
+    setFlipped(new Set(cards.map((c) => c.tcgId)));
   }, [cards]);
 
   const showPaymentUI = phase === "idle" || phase === "paying";
@@ -362,7 +334,6 @@ export default function BoosterPack({ userId = null }) {
                   : "Probar sin pagar (modo demo)"}
               </button>
             </div>
-
             <p className="text-white/40 text-xs">
               Pagos en sandbox: usa una cuenta de prueba PayPal Sandbox.
             </p>
@@ -409,11 +380,13 @@ export default function BoosterPack({ userId = null }) {
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
                 const high = isHighRarity(card);
-                const legendary = LEGENDARY_RARITIES.has(card.rareza ?? "");
-                const isFlipped = flipped.has(card.id);
+                const legendary = LEGENDARY_RARITIES.has(
+                  card.rarityLabel ?? "",
+                );
+                const isFlipped = flipped.has(card.tcgId);
                 return (
                   <motion.div
-                    key={card.id}
+                    key={card.tcgId}
                     initial={{ opacity: 0, y: 50, rotate: -5 }}
                     animate={{ opacity: 1, y: 0, rotate: 0 }}
                     transition={{
@@ -426,45 +399,35 @@ export default function BoosterPack({ userId = null }) {
                     <div
                       className={`bp-flip-card ${isFlipped ? "is-flipped" : ""}`}
                       onClick={() => {
-                        if (!isFlipped) {
-                          // Primera pulsación: voltear la carta
-                          handleFlip(card.id);
-                        } else {
-                          // Segunda pulsación: abrir vista en grande
-                          setZoomed(card);
-                        }
+                        if (!isFlipped) handleFlip(card.tcgId);
+                        else setZoomed(card);
                       }}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          if (!isFlipped) {
-                            handleFlip(card.id);
-                          } else {
-                            setZoomed(card);
-                          }
+                          if (!isFlipped) handleFlip(card.tcgId);
+                          else setZoomed(card);
                         }
                       }}
                       aria-label={
                         isFlipped
-                          ? `Ver ${card.nombre} en grande`
-                          : `Voltear carta ${card.nombre}`
+                          ? `Ver ${card.name} en grande`
+                          : `Voltear carta ${card.name}`
                       }
                     >
                       <div className="bp-flip-face">
                         <div className="bp-card-back" />
                       </div>
                       <div
-                        className={`bp-flip-face bp-flip-back ${
-                          high ? "bp-holo" : ""
-                        } ${legendary ? "bp-holo-legendary" : ""}`}
+                        className={`bp-flip-face bp-flip-back ${high ? "bp-holo" : ""} ${legendary ? "bp-holo-legendary" : ""}`}
                       >
-                        {card.imagenLarge ? (
+                        {card.imageUrl ? (
                           <img
                             className="bp-card-front-img"
-                            src={card.imagenLarge}
-                            alt={card.nombre}
+                            src={card.imageUrl}
+                            alt={card.name}
                             loading="lazy"
                           />
                         ) : (
@@ -481,16 +444,13 @@ export default function BoosterPack({ userId = null }) {
                         className="mt-2 text-center"
                       >
                         <p className="font-display font-semibold text-white truncate text-xs">
-                          {card.nombre}
+                          {card.name}
                         </p>
                         <div
-                          className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${rarityBadgeClass(
-                            card.rareza,
-                          )}`}
+                          className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${rarityBadgeClass(card.rarityLabel)}`}
                         >
-                          {card.rareza ?? "Sin clasificar"}
+                          {card.rarityLabel ?? "Sin clasificar"}
                         </div>
-                        {/* hint para que el usuario sepa que puede hacer click */}
                         <p className="text-[9px] text-white/35 mt-1">
                           toca para ver en grande
                         </p>
@@ -517,7 +477,6 @@ export default function BoosterPack({ userId = null }) {
         )}
       </AnimatePresence>
 
-      {/* Modal de zoom de carta */}
       <AnimatePresence>
         {zoomed && (
           <CardZoomModal card={zoomed} onClose={() => setZoomed(null)} />
