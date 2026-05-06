@@ -37,6 +37,7 @@ export interface UserCardEntry {
     variant: string;
     imageUrl: string;
     marketPrice: number;
+    stats: { hp: number; attack: number; defense: number; speed: number };
   };
 }
 

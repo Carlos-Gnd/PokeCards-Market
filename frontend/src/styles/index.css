@@ -218,7 +218,14 @@
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
- 
+
+/*
+  BUG FIX: scale(1.03) en el contenedor con perspective:1100 creaba
+  coordenadas de subpíxel en los motion.div internos con overflow:hidden
+  + transformStyle:preserve-3d, produciendo el efecto de desenfoque/blur
+  al hacer hover. Eliminar el scale y aumentar el translateY compensa
+  visualmente sin causar re-composición en GPU de las capas internas.
+*/
 .card-hover-lift:hover {
-  transform: translateY(-4px) scale(1.03);
+  transform: translateY(-6px);
 }

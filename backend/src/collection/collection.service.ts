@@ -19,6 +19,7 @@ export class CollectionService {
       card: {
         pokemonId: uc.card.pokemonId,
         tcgId: uc.card.tcgId,
+        setId: uc.card.setId,
         name: uc.card.name,
         type: uc.card.type,
         secondaryType: uc.card.secondaryType,
@@ -26,6 +27,12 @@ export class CollectionService {
         variant: uc.card.variant,
         imageUrl: uc.card.imageUrl,
         marketPrice: Number(uc.card.marketPrice),
+        stats: {
+          hp: uc.card.hp,
+          attack: uc.card.attack,
+          defense: uc.card.defense,
+          speed: uc.card.speed,
+        },
       },
     }));
   }

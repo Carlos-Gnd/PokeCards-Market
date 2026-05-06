@@ -1,6 +1,10 @@
-// ── backend/src/booster/booster.service.ts — v2.0 ────────────────────────────
-// Ya no accede a cartas_pokemon ni colecciones_usuario.
-// Todo pasa por la tabla `cards` (Prisma SSOT) y `user_cards`.
+// ── backend/src/booster/booster.service.ts — v2.1 ────────────────────────────
+// Bug fix: $queryRaw devolvía columnas en snake_case (tcg_id, image_url)
+// pero el tipo Card espera camelCase — todos los campos eran undefined,
+// haciendo que los 5 keys del pack fueran undefined y React colapsara la
+// cuadrícula a 1 elemento. Se reemplaza $queryRaw por CardsService.listAll()
+// que ya pasa por rowToPokeCard() y devuelve campos en camelCase correctos.
+// Además: los packs ahora solo incluyen cartas del set configurado (BOOSTER_SET_ID).
 import {
   ConflictException,
   Injectable,
@@ -17,19 +21,15 @@ import type {
   BoosterPack,
 } from './booster.types';
 import { CardsService } from '../cards/cards.service';
-import type { Card } from '@prisma/client';
+import type { PokeCard } from '../cards/pokeapi.service';
 
-// Rarezas que garantizan "carta rara" en el sobre
-const HIGH_RARITY_TIERS: readonly string[] = ['apex', 'ascendant', 'eternal'];
-// En rarityLabel (valor original TCG):
-const HIGH_RARITY_LABELS: readonly string[] = [
-  'Illustration Rare',
-  'Ultra Rare',
-  'Special Illustration Rare',
-  'Hyper Rare',
-  'Double Rare',
-];
+// Tiers de rareza alta (en formato de PokeCard.rarity — camelCase, ya mapeado)
+const HIGH_RARITY_TIERS = new Set(['apex', 'ascendant', 'eternal']);
 const HIGH_PRICE_THRESHOLD = 5.0;
+
+// Set al que pertenece este sobre: "Prismatic Evolutions" (sv8pt5).
+// Todos los packs usan únicamente cartas de este set.
+const BOOSTER_SET_ID = 'sv8pt5';
 
 @Injectable()
 export class BoosterService {
@@ -95,7 +95,6 @@ export class BoosterService {
 
   /**
    * Captura la orden PayPal, genera el pack y persiste si hay userId.
-   * Idempotencia: verifica en user_cards (ya no en colecciones_usuario).
    */
   async captureOrder(
     paypalOrderId: string,
@@ -107,7 +106,6 @@ export class BoosterService {
       );
     }
 
-    // Idempotencia — si ya existe una Order COMPLETED con este paypalOrderId
     if (userId) {
       const existingOrder = await this.prisma.order.findUnique({
         where: { paypalOrderId },
@@ -154,49 +152,61 @@ export class BoosterService {
   // ── Helpers privados ────────────────────────────────────────────────────────
 
   /**
-   * Selecciona 5 cartas aleatorias garantizando al menos 1 rara.
-   * ✅ v2.0: usa Prisma ORM sobre la tabla `cards`.
+   * Selecciona 5 cartas del set configurado (BOOSTER_SET_ID), garantizando
+   * al menos 1 de rareza alta.
+   *
+   * Bug fix v2.1: se usa CardsService.listAll() (→ PokeCard, camelCase) en vez
+   * de $queryRaw (→ snake_case). Con $queryRaw los campos tcgId, imageUrl, etc.
+   * eran undefined porque la DB los devuelve como tcg_id, image_url. Eso hacía
+   * que los 5 keys fueran undefined y React colapsara el grid a 1 carta.
    */
   private async pickRandomPack(): Promise<{
     cards: BoosterCard[];
     guaranteedId: string;
   }> {
-    // Una carta garantizada de rareza alta (tier apex / ascendant / eternal)
-    const rareRows = await this.prisma.$queryRaw<Card[]>`
-      SELECT *
-      FROM cards
-      WHERE rarity = ANY(${HIGH_RARITY_TIERS}::text[])
-         OR market_price::numeric > ${HIGH_PRICE_THRESHOLD}
-      ORDER BY RANDOM()
-      LIMIT 1
-    `;
+    const catalog = await this.cardsService.listAll(); // PokeCard[] — camelCase
 
-    if (rareRows.length === 0) {
+    // Filtrar al set del sobre; si no hay suficientes, usar catálogo completo
+    const setCards = catalog.filter((c) => c.setId === BOOSTER_SET_ID);
+    const pool = setCards.length >= 5 ? setCards : catalog;
+
+    if (pool.length === 0) {
       throw new InternalServerErrorException(
-        'No hay cartas raras disponibles. Ejecuta el seed de la tabla cards.',
+        'No hay cartas disponibles. Ejecuta el seed de la tabla cards.',
       );
     }
-    const rareRow = rareRows[0];
 
-    // Cuatro cartas de relleno (sin repetir la rara)
-    const fillRows = await this.prisma.$queryRaw<Card[]>`
-      SELECT *
-      FROM cards
-      WHERE tcg_id <> ${rareRow.tcgId}
-      ORDER BY RANDOM()
-      LIMIT 4
-    `;
+    // Pool de cartas raras para la carta garantizada
+    const rarePool = pool.filter(
+      (c) =>
+        HIGH_RARITY_TIERS.has(c.rarity) || c.marketPrice > HIGH_PRICE_THRESHOLD,
+    );
 
-    const cards = [...fillRows, rareRow]
+    // Si no hay raras en el pool, usar la de mayor precio como garantizada
+    const guaranteedCard =
+      rarePool.length > 0
+        ? rarePool[Math.floor(Math.random() * rarePool.length)]
+        : [...pool].sort((a, b) => b.marketPrice - a.marketPrice)[0];
+
+    // Cartas de relleno evitando repetir la garantizada si hay suficientes
+    const fillSource = pool.filter((c) => c.tcgId !== guaranteedCard.tcgId);
+    const shuffled = [...fillSource].sort(() => Math.random() - 0.5);
+    const fillCards = shuffled.slice(0, 4);
+
+    // Si el pool es muy pequeño, permite duplicados para completar 5 cartas
+    while (fillCards.length < 4) {
+      fillCards.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+
+    const cards = [guaranteedCard, ...fillCards]
       .sort(() => Math.random() - 0.5)
-      .map((row) => this.rowToBoosterCard(row));
+      .map((c) => this.pokeCardToBoosterCard(c));
 
-    return { cards, guaranteedId: rareRow.tcgId };
+    return { cards, guaranteedId: guaranteedCard.tcgId };
   }
 
   /**
-   * Persiste las cartas del pack en user_cards.
-   * ✅ v2.0: ya NO escribe en colecciones_usuario.
+   * Persiste las cartas del pack en user_cards vía ensureInDb.
    */
   private async persistPack({
     userId,
@@ -210,10 +220,8 @@ export class BoosterService {
 
     for (const card of cards) {
       try {
-        // Garantiza que la carta exista en `cards` (upsert por tcgId)
         const prismaCard = await this.cardsService.ensureInDb(card.tcgId);
 
-        // Registra en user_cards — orderId queda null (no hay Order individual por booster)
         await this.prisma.userCard.upsert({
           where: { userId_cardId: { userId, cardId: prismaCard.id } },
           update: { quantity: { increment: 1 } },
@@ -231,34 +239,23 @@ export class BoosterService {
     }
   }
 
-  /** Convierte un row Prisma `Card` al shape público `BoosterCard`. */
-  private rowToBoosterCard(row: Card): BoosterCard {
-    const mp =
-      typeof row.marketPrice === 'object' && 'toNumber' in row.marketPrice
-        ? (row.marketPrice as { toNumber(): number }).toNumber()
-        : Number(row.marketPrice);
-
+  /** Convierte PokeCard (catálogo, camelCase) al shape de respuesta BoosterCard. */
+  private pokeCardToBoosterCard(card: PokeCard): BoosterCard {
     return {
-      tcgId: row.tcgId,
-      setId: row.setId,
-      nombre: row.name,
-      pokemonId: row.pokemonId,
-      rareza: row.rarity, // tier interno
-      rarityLabel: '', // se puede rellenar desde RARITY_TO_TIER si se necesita
-      tipo: row.type,
-      imagenSmall: row.imageUrl,
-      imagenLarge: row.imageUrl,
-      precioMercado: mp,
-      stats: {
-        hp: row.hp,
-        attack: row.attack,
-        defense: row.defense,
-        speed: row.speed,
-      },
+      tcgId: card.tcgId,
+      setId: card.setId,
+      nombre: card.name,
+      pokemonId: card.pokemonId,
+      rareza: card.rarity,
+      rarityLabel: card.rarityLabel,
+      tipo: card.type,
+      imagenSmall: card.imageUrl,
+      imagenLarge: card.imageUrl,
+      precioMercado: card.marketPrice,
+      stats: card.stats,
       esRara:
-        HIGH_RARITY_TIERS.includes(row.rarity) ||
-        HIGH_RARITY_LABELS.includes(row.rarity) ||
-        mp > HIGH_PRICE_THRESHOLD,
+        HIGH_RARITY_TIERS.has(card.rarity) ||
+        card.marketPrice > HIGH_PRICE_THRESHOLD,
     };
   }
 }

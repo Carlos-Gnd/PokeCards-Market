@@ -277,11 +277,11 @@ export function TopNavBar() {
                 {/* Perfil de usuario */}
                 {user && (
                   <div
-                    className="flex items-center gap-3 px-4 py-4 border-b"
+                    className="flex items-center gap-2.5 px-4 py-3 border-b"
                     style={{ borderColor: "rgba(255,255,255,0.06)" }}
                   >
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-display font-bold shrink-0"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-display font-bold shrink-0"
                       style={{
                         background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
                       }}
@@ -289,43 +289,43 @@ export function TopNavBar() {
                       {username?.[0]?.toUpperCase() ?? "U"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">
+                      <p className="text-sm font-semibold text-white truncate leading-tight">
                         {username}
                       </p>
-                      <p className="text-[11px] text-white/45 truncate">
+                      <p className="text-[10px] text-white/40 truncate">
                         {user.email}
                       </p>
                     </div>
                     {totalCards > 0 && (
                       <span
-                        className="text-[11px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0"
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold shrink-0"
                         style={{
                           background: "rgba(59,130,246,0.2)",
                           color: "#93C5FD",
                           border: "1px solid rgba(59,130,246,0.3)",
                         }}
                       >
-                        {totalCards} cartas
+                        {totalCards}
                       </span>
                     )}
                   </div>
                 )}
 
                 {/* Links de navegación */}
-                <nav className="flex flex-col p-2 gap-0.5">
+                <nav className="flex flex-col p-1.5 gap-0.5">
                   <NavLink
                     to="/marketplace"
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                        "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
                         isActive
                           ? "text-white bg-primary/15 border border-primary/20"
                           : "text-white/70 hover:text-white hover:bg-white/[0.05]",
                       )
                     }
                   >
-                    <Store size={17} strokeWidth={1.8} />
+                    <Store size={16} strokeWidth={1.8} />
                     Marketplace
                   </NavLink>
                   <NavLink
@@ -333,15 +333,15 @@ export function TopNavBar() {
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                        "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
                         isActive
                           ? "text-white bg-primary/15 border border-primary/20"
                           : "text-white/70 hover:text-white hover:bg-white/[0.05]",
                       )
                     }
                   >
-                    <PackageOpen size={17} strokeWidth={1.8} />
-                    Sobres Pokémon
+                    <PackageOpen size={16} strokeWidth={1.8} />
+                    Sobres
                   </NavLink>
                   {user && (
                     <NavLink
@@ -349,14 +349,14 @@ export function TopNavBar() {
                       onClick={() => setOpen(false)}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                          "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
                           isActive
                             ? "text-white bg-primary/15 border border-primary/20"
                             : "text-white/70 hover:text-white hover:bg-white/[0.05]",
                         )
                       }
                     >
-                      <Library size={17} strokeWidth={1.8} />
+                      <Library size={16} strokeWidth={1.8} />
                       Mi Colección
                       {totalCards > 0 && (
                         <span
@@ -376,28 +376,28 @@ export function TopNavBar() {
 
                 {/* Auth en móvil */}
                 <div
-                  className="p-2 pt-0 border-t mt-1"
+                  className="p-1.5 pt-0 border-t"
                   style={{ borderColor: "rgba(255,255,255,0.06)" }}
                 >
                   {user ? (
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                     >
-                      <LogOut size={17} strokeWidth={1.8} />
+                      <LogOut size={16} strokeWidth={1.8} />
                       Cerrar sesión
                     </button>
                   ) : (
-                    <div className="flex flex-col gap-2 p-2">
+                    <div className="flex flex-col gap-1.5 p-1.5">
                       <Link
                         to="/login"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-colors"
+                        className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-colors"
                       >
-                        <UserIcon size={15} /> Iniciar sesión
+                        <UserIcon size={14} /> Iniciar sesión
                       </Link>
                       <Link
                         to="/register"
-                        className="btn-primary w-full text-center py-2.5 rounded-xl text-sm"
+                        className="btn-primary w-full text-center py-2 rounded-xl text-sm"
                       >
                         Registrarse
                       </Link>

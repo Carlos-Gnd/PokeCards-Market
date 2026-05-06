@@ -1,52 +1,64 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import "../../styles/booster.css";
 import { api } from "../../lib/api";
+import { Card } from "../card";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
 
-const HIGH_RARITIES = new Set([
-  "Illustration Rare",
-  "Ultra Rare",
-  "Special Illustration Rare",
-  "Hyper Rare",
-  "Double Rare",
-]);
-
-const LEGENDARY_RARITIES = new Set(["Special Illustration Rare", "Hyper Rare"]);
-
-function isHighRarity(card) {
-  if (!card) return false;
-  if (HIGH_RARITIES.has(card.rarityLabel)) return true;
-  return Number(card.marketPrice ?? 0) > 5;
+/**
+ * Maps raw BoosterCard from the backend (Spanish field names) to the ArcadiumCard
+ * interface used by all frontend components (English field names).
+ *
+ * Root cause: booster.service.ts#rowToBoosterCard() returns nombre/tipo/rareza/
+ * imagenSmall/precioMercado. Without this normalizer, every field the Card component
+ * reads is undefined, collapsing the 5-card grid to a single broken element.
+ */
+function normalizeBoosterCard(raw) {
+  return {
+    tcgId:         raw.tcgId,
+    setId:         raw.setId ?? "",
+    name:          raw.nombre ?? raw.name ?? "",
+    pokemonId:     raw.pokemonId ?? 0,
+    rarity:        raw.rareza ?? raw.rarity ?? "core",
+    rarityLabel:   raw.rarityLabel || raw.rareza || raw.rarity || "core",
+    type:          raw.tipo ?? raw.type ?? "",
+    secondaryType: raw.secondaryType ?? null,
+    variant:       raw.variant ?? "standard",
+    imageUrl:      raw.imagenSmall ?? raw.imagenLarge ?? raw.imageUrl ?? "",
+    marketPrice:   Number(raw.precioMercado ?? raw.marketPrice ?? 0),
+    stats:         raw.stats ?? { hp: 0, attack: 0, defense: 0, speed: 0 },
+    height:        raw.height ?? 0,
+    weight:        raw.weight ?? 0,
+    abilities:     raw.abilities ?? [],
+  };
 }
 
-function rarityBadgeClass(rarityLabel) {
-  switch (rarityLabel) {
-    case "Special Illustration Rare":
-    case "Hyper Rare":
-      return "bg-gold/20 text-gold border-gold/40";
-    case "Illustration Rare":
-    case "Ultra Rare":
-      return "bg-primary/20 text-primary-glow border-primary/40";
-    case "Double Rare":
-      return "bg-accent/20 text-accent border-accent/40";
-    case "Rare":
-      return "bg-white/10 text-white border-white/20";
-    default:
-      return "bg-white/[0.04] text-white/60 border-white/10";
-  }
+function StatRow({ label, value, color }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+      <div className="flex-1">
+        <div className="text-[10px] uppercase tracking-wider text-white/45">{label}</div>
+        <div className={`font-mono font-bold text-sm ${color}`}>{value}</div>
+      </div>
+    </div>
+  );
 }
 
 // ── Modal de visualización en grande ─────────────────────────────────────────
 function CardZoomModal({ card, onClose }) {
-  if (!card) return null;
+  // Bloquear scroll mientras el modal esté abierto
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
-  // ¡USAMOS LOS STATS REALES DE LA BASE DE DATOS! 🚀
-  const stats = card.stats || { hp: 0, attack: 0, defense: 0, speed: 0 };
+  if (!card) return null;
+  const stats = card.stats ?? { hp: 0, attack: 0, defense: 0, speed: 0 };
 
   return (
     <div
@@ -63,23 +75,12 @@ function CardZoomModal({ card, onClose }) {
         className="relative z-10 flex flex-col sm:flex-row items-center gap-6 max-w-2xl w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative flex-shrink-0">
-          {card.imageUrl ? (
-            <img
-              src={card.imageUrl}
-              alt={card.name}
-              className="w-64 sm:w-72 rounded-2xl shadow-2xl"
-              style={{
-                boxShadow: isHighRarity(card)
-                  ? "0 0 60px rgba(109,94,248,0.5), 0 20px 50px rgba(0,0,0,0.6)"
-                  : "0 20px 50px rgba(0,0,0,0.6)",
-              }}
-            />
-          ) : (
-            <div className="w-64 sm:w-72 aspect-[245/342] rounded-2xl bg-surface-2 bp-card-skeleton" />
-          )}
+        {/* Carta completa con efectos holográficos y tilt 3D */}
+        <div className="relative flex-shrink-0 w-64 sm:w-72">
+          <Card card={card} size="lg" enableTilt />
         </div>
 
+        {/* Panel de estadísticas */}
         <div className="flex-1 space-y-3">
           <div>
             <p className="font-display font-black text-2xl text-white leading-tight">
@@ -92,29 +93,15 @@ function CardZoomModal({ card, onClose }) {
             )}
           </div>
 
-          <div
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium ${rarityBadgeClass(card.rarityLabel)}`}
-          >
-            {card.rarityLabel ?? "Sin clasificar"}
+          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium bg-white/[0.04] text-white/60 border-white/10 capitalize">
+            {card.rarityLabel}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <StatRow label="HP" value={stats.hp} color="text-rose-400" />
-            <StatRow
-              label="Ataque"
-              value={stats.attack}
-              color="text-orange-400"
-            />
-            <StatRow
-              label="Defensa"
-              value={stats.defense}
-              color="text-blue-400"
-            />
-            <StatRow
-              label="Velocidad"
-              value={stats.speed}
-              color="text-emerald-400"
-            />
+            <StatRow label="Ataque" value={stats.attack} color="text-orange-400" />
+            <StatRow label="Defensa" value={stats.defense} color="text-blue-400" />
+            <StatRow label="Velocidad" value={stats.speed} color="text-emerald-400" />
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-white/10">
@@ -138,19 +125,6 @@ function CardZoomModal({ card, onClose }) {
   );
 }
 
-function StatRow({ label, value, color }) {
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-      <div className="flex-1">
-        <div className="text-[10px] uppercase tracking-wider text-white/45">
-          {label}
-        </div>
-        <div className={`font-mono font-bold text-sm ${color}`}>{value}</div>
-      </div>
-    </div>
-  );
-}
-
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function BoosterPack({ userId = null }) {
   const [phase, setPhase] = useState("idle");
@@ -161,7 +135,9 @@ export default function BoosterPack({ userId = null }) {
   const [zoomed, setZoomed] = useState(null);
 
   const beginReveal = useCallback((fetched) => {
-    setCards(fetched);
+    // Normalize backend field names (nombre→name, rareza→rarity, etc.)
+    // before storing — all child components expect ArcadiumCard shape.
+    setCards(fetched.map(normalizeBoosterCard));
     setFlipped(new Set());
     setPhase("opening");
     window.setTimeout(() => setPhase("revealed"), 1100);
@@ -178,23 +154,17 @@ export default function BoosterPack({ userId = null }) {
       setError(null);
       setPhase("paying");
       try {
-        const res = await fetch(`${API_URL}/api/booster/capture-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paypalOrderId: data.orderID, userId }),
+        const { data: result } = await api.post("/booster/capture-order", {
+          paypalOrderId: data.orderID,
+          userId,
         });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.message ?? `HTTP ${res.status}`);
-        }
-        const result = await res.json();
         setSuccess({
           paypalOrderId: result.paypalOrderId,
           persisted: result.persisted,
         });
         beginReveal(result.cartas);
       } catch (err) {
-        setError(err.message ?? "No se pudo confirmar el pago");
+        setError(err?.uiMessage ?? err?.message ?? "No se pudo confirmar el pago");
         setPhase("idle");
       }
     },
@@ -205,16 +175,14 @@ export default function BoosterPack({ userId = null }) {
     setError(null);
     setPhase("paying");
     try {
-      const res = await fetch(`${API_URL}/api/booster/demo`, { method: "GET" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const { data } = await api.get("/booster/demo");
       if (!Array.isArray(data.cartas) || data.cartas.length === 0) {
         throw new Error("Respuesta inválida del servidor");
       }
       setSuccess(null);
       beginReveal(data.cartas);
     } catch (err) {
-      setError(err.message ?? "No se pudo abrir el sobre");
+      setError(err?.uiMessage ?? err?.message ?? "No se pudo abrir el sobre");
       setPhase("idle");
     }
   }, [beginReveal]);
@@ -379,10 +347,6 @@ export default function BoosterPack({ userId = null }) {
             </p>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 w-full max-w-[680px] mx-auto bp-perspective">
               {cards.map((card, idx) => {
-                const high = isHighRarity(card);
-                const legendary = LEGENDARY_RARITIES.has(
-                  card.rarityLabel ?? "",
-                );
                 const isFlipped = flipped.has(card.tcgId);
                 return (
                   <motion.div
@@ -396,45 +360,53 @@ export default function BoosterPack({ userId = null }) {
                     }}
                     className="relative"
                   >
-                    <div
-                      className={`bp-flip-card ${isFlipped ? "is-flipped" : ""}`}
-                      onClick={() => {
-                        if (!isFlipped) handleFlip(card.tcgId);
-                        else setZoomed(card);
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          if (!isFlipped) handleFlip(card.tcgId);
-                          else setZoomed(card);
-                        }
-                      }}
-                      aria-label={
-                        isFlipped
-                          ? `Ver ${card.name} en grande`
-                          : `Voltear carta ${card.name}`
-                      }
-                    >
-                      <div className="bp-flip-face">
-                        <div className="bp-card-back" />
-                      </div>
-                      <div
-                        className={`bp-flip-face bp-flip-back ${high ? "bp-holo" : ""} ${legendary ? "bp-holo-legendary" : ""}`}
-                      >
-                        {card.imageUrl ? (
-                          <img
-                            className="bp-card-front-img"
-                            src={card.imageUrl}
-                            alt={card.name}
-                            loading="lazy"
+                    {/*
+                      Replace legacy bp-flip-card div structure with <Card />.
+                      Pre-flip: card back (static CSS div).
+                      Post-flip: Card component with full tilt 3D + rarity effects.
+                      AnimatePresence handles the rotateY crossfade between states,
+                      avoiding the overflow:hidden / preserve-3d conflict that the
+                      CSS-only flip approach had.
+                    */}
+                    <AnimatePresence mode="wait" initial={false}>
+                      {!isFlipped ? (
+                        <motion.div
+                          key="back"
+                          exit={{ rotateY: 90, opacity: 0 }}
+                          transition={{ duration: 0.22 }}
+                          className="bp-flip-card cursor-pointer"
+                          onClick={() => handleFlip(card.tcgId)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleFlip(card.tcgId);
+                            }
+                          }}
+                          aria-label={`Voltear carta ${idx + 1}`}
+                        >
+                          <div className="bp-flip-face">
+                            <div className="bp-card-back" />
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="front"
+                          initial={{ rotateY: -90, opacity: 0 }}
+                          animate={{ rotateY: 0, opacity: 1 }}
+                          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                          className="max-w-[160px] mx-auto"
+                        >
+                          <Card
+                            card={card}
+                            size="sm"
+                            enableTilt
+                            onClick={() => setZoomed(card)}
                           />
-                        ) : (
-                          <div className="bp-card-skeleton w-full h-full" />
-                        )}
-                      </div>
-                    </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {isFlipped && (
                       <motion.div
@@ -446,10 +418,8 @@ export default function BoosterPack({ userId = null }) {
                         <p className="font-display font-semibold text-white truncate text-xs">
                           {card.name}
                         </p>
-                        <div
-                          className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium ${rarityBadgeClass(card.rarityLabel)}`}
-                        >
-                          {card.rarityLabel ?? "Sin clasificar"}
+                        <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium bg-white/[0.04] text-white/60 border-white/10 capitalize">
+                          {card.rarityLabel}
                         </div>
                         <p className="text-[9px] text-white/35 mt-1">
                           toca para ver en grande

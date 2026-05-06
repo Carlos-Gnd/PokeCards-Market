@@ -152,8 +152,7 @@ export function CollectionVaultPage() {
                 variant: entry.card.variant,
                 imageUrl: entry.card.imageUrl,
                 marketPrice: entry.card.marketPrice,
-                // Si el backend no envía los stats en este endpoint, usamos 0 por defecto en lugar de usar matemáticas falsas.
-                stats: { hp: 0, attack: 0, defense: 0, speed: 0 },
+                stats: entry.card.stats,
                 height: 0,
                 weight: 0,
                 abilities: [],
@@ -175,6 +174,8 @@ export function CollectionVaultPage() {
                     owned
                     onClick={() => setSelected(card)}
                     size="sm"
+                    enableTilt={false} // Apaga el "escucha" del movimiento del mouse
+                    lightweight={true} // Apaga las capas pesadas (holo, foil, partículas)
                   />
                   {entry.quantity > 1 && (
                     <span className="absolute -top-2 -right-2 z-30 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-primary text-white border border-white/20 shadow-lg">
