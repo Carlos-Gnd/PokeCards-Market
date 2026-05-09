@@ -8,32 +8,26 @@ import { Card } from "../card";
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 const BOOSTER_PACK_PRICE_USD = 4.99;
 
-/**
- * Maps raw BoosterCard from the backend (Spanish field names) to the ArcadiumCard
- * interface used by all frontend components (English field names).
- *
- * Root cause: booster.service.ts#rowToBoosterCard() returns nombre/tipo/rareza/
- * imagenSmall/precioMercado. Without this normalizer, every field the Card component
- * reads is undefined, collapsing the 5-card grid to a single broken element.
- */
-function normalizeBoosterCard(raw) {
-  return {
-    tcgId:         raw.tcgId,
-    setId:         raw.setId ?? "",
-    name:          raw.nombre ?? raw.name ?? "",
-    pokemonId:     raw.pokemonId ?? 0,
-    rarity:        raw.rareza ?? raw.rarity ?? "core",
-    rarityLabel:   raw.rarityLabel || raw.rareza || raw.rarity || "core",
-    type:          raw.tipo ?? raw.type ?? "",
-    secondaryType: raw.secondaryType ?? null,
-    variant:       raw.variant ?? "standard",
-    imageUrl:      raw.imagenSmall ?? raw.imagenLarge ?? raw.imageUrl ?? "",
-    marketPrice:   Number(raw.precioMercado ?? raw.marketPrice ?? 0),
-    stats:         raw.stats ?? { hp: 0, attack: 0, defense: 0, speed: 0 },
-    height:        raw.height ?? 0,
-    weight:        raw.weight ?? 0,
-    abilities:     raw.abilities ?? [],
-  };
+function normalizeBoosterCard(raw, idx) { 
+  const safeId = raw.tcgId ?? raw.tcg_id ?? raw.id ?? `fallback-${idx}`;
+  
+  return { 
+    tcgId: safeId, 
+    setId: raw.setId ?? raw.set_id ?? "", 
+    name: raw.nombre ?? raw.name ?? "Desconocido", 
+    pokemonId: raw.pokemonId ?? raw.pokemon_id ?? 0, 
+    rarity: raw.rareza ?? raw.rarity ?? "core", 
+    rarityLabel: raw.rarityLabel ?? raw.rareza ?? raw.rarity ?? "core", 
+    type: raw.tipo ?? raw.type ?? "", 
+    secondaryType: raw.secondaryType ?? raw.secondary_type ?? null, 
+    variant: raw.variant ?? "standard", 
+    imageUrl: raw.imagenLarge ?? raw.imagenSmall ?? raw.imageUrl ?? raw.image_url ?? "", 
+    marketPrice: Number(raw.precioMercado ?? raw.marketPrice ?? raw.market_price ?? 0), 
+    stats: raw.stats ?? { hp: 0, attack: 0, defense: 0, speed: 0 }, 
+    height: raw.height ?? 0, 
+    weight: raw.weight ?? 0, 
+    abilities: raw.abilities ?? [], 
+  }; 
 }
 
 function StatRow({ label, value, color }) {
@@ -134,10 +128,8 @@ export default function BoosterPack({ userId = null }) {
   const [success, setSuccess] = useState(null);
   const [zoomed, setZoomed] = useState(null);
 
-  const beginReveal = useCallback((fetched) => {
-    // Normalize backend field names (nombre→name, rareza→rarity, etc.)
-    // before storing — all child components expect ArcadiumCard shape.
-    setCards(fetched.map(normalizeBoosterCard));
+  const beginReveal = useCallback((fetched) => {  
+    setCards(fetched.map((raw, idx) => normalizeBoosterCard(raw, idx)));
     setFlipped(new Set());
     setPhase("opening");
     window.setTimeout(() => setPhase("revealed"), 1100);
@@ -350,7 +342,7 @@ export default function BoosterPack({ userId = null }) {
                 const isFlipped = flipped.has(card.tcgId);
                 return (
                   <motion.div
-                    key={card.tcgId}
+                    key={`${card.tcgId}-${idx}`}
                     initial={{ opacity: 0, y: 50, rotate: -5 }}
                     animate={{ opacity: 1, y: 0, rotate: 0 }}
                     transition={{
@@ -360,14 +352,6 @@ export default function BoosterPack({ userId = null }) {
                     }}
                     className="relative"
                   >
-                    {/*
-                      Replace legacy bp-flip-card div structure with <Card />.
-                      Pre-flip: card back (static CSS div).
-                      Post-flip: Card component with full tilt 3D + rarity effects.
-                      AnimatePresence handles the rotateY crossfade between states,
-                      avoiding the overflow:hidden / preserve-3d conflict that the
-                      CSS-only flip approach had.
-                    */}
                     <AnimatePresence mode="wait" initial={false}>
                       {!isFlipped ? (
                         <motion.div
