@@ -14,7 +14,7 @@ export default defineConfig({
           if (id.includes("framer-motion")) return "vendor-motion";
           if (id.includes("@paypal")) return "vendor-paypal";
           if (id.includes("@tanstack")) return "vendor-virtual";
-          if (id.includes("zustand") || id.includes("supabase"))
+          if (id.includes("zustand"))
             return "vendor-state";
           if (id.includes("react") || id.includes("react-router"))
             return "vendor-react";

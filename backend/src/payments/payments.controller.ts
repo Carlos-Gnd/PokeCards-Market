@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionUser } from '../auth/current-user.decorator';
 import { CreateOrderDto, CaptureOrderDto } from './dto';
 
 @Controller('payments')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 

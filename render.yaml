@@ -1,0 +1,35 @@
+# Blueprint de Render para el backend de PokéCards Market (NestJS + Prisma).
+# Render → New → Blueprint → conectar este repo. Pide los secretos (sync:false) en el dashboard.
+# Base de datos: Neon Postgres. Plan free sin keep-alive: se duerme tras ~15 min sin tráfico.
+
+services:
+  - type: web
+    name: pokecards-market-api
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://pokecards-market.vercel.app
+      - key: BOOSTER_PACK_PRICE_USD
+        value: "4.99"
+      - key: JWT_SECRET
+        generateValue: true
+      # ── Secretos: se cargan en el dashboard, NO en el repo ──
+      - key: DATABASE_URL          # Neon pooled (host con -pooler)
+        sync: false
+      - key: DIRECT_URL            # Neon directo, para prisma db push / migraciones
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_ENV
+        value: sandbox

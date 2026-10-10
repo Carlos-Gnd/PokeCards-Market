@@ -16,16 +16,16 @@ Se optó por el **Pokémon TCG API** (`pokemontcg.io`) — la API oficial de dat
 - Rareza oficial del juego (`Common`, `Illustration Rare`, `Hyper Rare`…)
 - Tipo de Pokémon, número de Pokédex, set de expansión
 
-Los datos de 5 expansiones (951 cartas) fueron descargados vía esa API y cargados en Supabase PostgreSQL. El backend los sirve con cache de 5 minutos.
+Los datos de 5 expansiones (951 cartas) fueron descargados vía esa API y cargados en PostgreSQL (Neon). El backend los sirve con cache de 5 minutos.
 
 ---
 
 ## Stack
 
 ```
-Frontend (Netlify)          Backend (Azure VPS)         Base de datos
-React 18 + Vite      ──►   NestJS + Prisma ORM   ──►   Supabase PostgreSQL
-TypeScript                  TypeScript                   (cloud)
+Frontend (Vercel)           Backend (Render, Docker)    Base de datos
+React 18 + Vite      ──►   NestJS + Prisma ORM   ──►   Neon PostgreSQL
+TypeScript                  TypeScript                   (serverless)
 Tailwind + Framer Motion         │
 Zustand                    PayPal Sandbox API
 ```
@@ -48,7 +48,7 @@ Zustand                    PayPal Sandbox API
 ### Funcionalidades adicionales
 - Sistema de **7 rarezas** con efectos visuales por capas (holo, foil, rayos, partículas)
 - **Booster packs**: comprar sobre con 5 cartas aleatorias garantizando al menos 1 rara
-- **Registro e inicio de sesión** con Supabase Auth (JWT)
+- **Registro e inicio de sesión** propio: bcrypt + JWT firmado por el backend
 - **Filtros** en marketplace: rareza, tipo, nombre, precio, "solo no poseídas"
 - Cartas con efecto 3D **tilt** al mover el mouse
 - Diseño responsivo y animado (mobile first)
@@ -76,11 +76,12 @@ npm run dev            # http://localhost:5173
 
 | Servicio | URL |
 |---|---|
-| Frontend | https://pokecardsmarket.netlify.app |
-| Backend | http://48.214.145.60:3000 (Azure VPS) |
-| Base de datos | Supabase PostgreSQL (cloud) |
+| Frontend | https://pokecards-market.vercel.app |
+| Backend | https://pokecards-market-api.onrender.com (Render, plan free) |
+| Base de datos | Neon PostgreSQL |
 
-El frontend en Netlify usa un proxy inverso (`netlify.toml`) para redirigir `/api/*` al VPS sin exponer la URL HTTP al navegador (evita mixed content).
+El frontend en Vercel reenvía `/api/*` al backend en Render con un rewrite (`frontend/vercel.json`), así que el navegador solo habla con un origen.
+El backend usa el plan free de Render: tras ~15 min sin tráfico se duerme y la primera petición tarda unos 50 s.
 
 ---
 
@@ -89,4 +90,4 @@ El frontend en Netlify usa un proxy inverso (`netlify.toml`) para redirigir `/ap
 Email: sb-ce43gk50925696@personal.example.com
 Password: 4zGi?_'Y
 
-El sistema acepta pagos de prueba y registra cada transacción con su `paypalOrderId` en Supabase.
+El sistema acepta pagos de prueba y registra cada transacción con su `paypalOrderId` en la base de datos.

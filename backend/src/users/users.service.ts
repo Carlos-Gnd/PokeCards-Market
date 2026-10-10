@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -5,30 +6,25 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async upsertFromAuth(input: { id: string; email: string }) {
-    const fallbackUsername = input.email
-      ? input.email.split('@')[0]
-      : `arcanaut_${input.id.slice(0, 6)}`;
-    return this.prisma.user.upsert({
-      where: { id: input.id },
-      update: {},
-      create: {
-        id: input.id,
-        email: input.email ?? `${input.id}@anon.local`,
-        username: await this.uniqueUsername(fallbackUsername),
-        language: 'es',
-      },
-    });
+  findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async createProfile(input: { id: string; email: string; username: string }) {
-    return this.prisma.user.upsert({
-      where: { id: input.id },
-      update: { username: input.username },
-      create: {
-        id: input.id,
+  findByEmail(email: string) {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  async createWithPassword(input: {
+    email: string;
+    username: string;
+    passwordHash: string;
+  }) {
+    return this.prisma.user.create({
+      data: {
+        id: randomUUID(),
         email: input.email,
         username: await this.uniqueUsername(input.username),
+        passwordHash: input.passwordHash,
         language: 'es',
       },
     });

@@ -13,7 +13,7 @@ COPY prisma ./prisma/
 # Instala las dependencias
 RUN npm install
 
-# Genera el cliente de Prisma para poder conectarte a Supabase
+# Genera el cliente de Prisma
 RUN npx prisma generate
 
 # Copia el resto del código fuente del backend

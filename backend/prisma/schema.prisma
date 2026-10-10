@@ -1,5 +1,5 @@
 // ARCADIUM Prisma schema — v2.0
-// Datasource: Supabase PostgreSQL
+// Datasource: Neon PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
@@ -15,16 +15,17 @@ datasource db {
 // User
 // ─────────────────────────────────────────────────────────────────────────────
 model User {
-  id         String     @id @db.Uuid
-  email      String     @unique
-  username   String     @unique
-  avatarUrl  String?    @map("avatar_url")
-  language   String     @default("es")
-  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  id           String   @id @db.Uuid
+  email        String   @unique
+  username     String   @unique
+  passwordHash String?  @map("password_hash")
+  avatarUrl    String?  @map("avatar_url")
+  language     String   @default("es")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  cards      UserCard[]
-  orders     Order[]
+  cards  UserCard[]
+  orders Order[]
 
   @@map("users")
 }
@@ -33,38 +34,38 @@ model User {
 // Card  (SSOT de cartas TCG)
 // ─────────────────────────────────────────────────────────────────────────────
 model Card {
-  id            BigInt   @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
 
   // tcgId es el identificador único de TCG API (ej. "sv4pt5-25").
   // NOT NULL + @unique → es la clave de upsert en toda la capa de negocio.
-  tcgId         String   @unique @map("tcg_id")
+  tcgId String @unique @map("tcg_id")
 
   // pokemonId ya no es @unique — distintas cartas del mismo Pokémon (distintos sets)
   // conviven perfectamente en la tabla.
-  pokemonId     Int      @map("pokemon_id")
+  pokemonId Int @map("pokemon_id")
 
   // Identifica la expansión (set) a la que pertenece la carta (ej. "sv4pt5").
-  setId         String   @map("set_id")
+  setId String @map("set_id")
 
   name          String
   type          String
-  secondaryType String?  @map("secondary_type")
+  secondaryType String? @map("secondary_type")
   rarity        String
   variant       String
-  imageUrl      String   @map("image_url")
-  marketPrice   Decimal  @map("market_price") @db.Decimal(10, 2)
+  imageUrl      String  @map("image_url")
+  marketPrice   Decimal @map("market_price") @db.Decimal(10, 2)
 
   // Stats almacenados como campos propios (SSOT — no calculados on-the-fly).
-  hp            Int      @default(0)
-  attack        Int      @default(0)
-  defense       Int      @default(0)
-  speed         Int      @default(0)
+  hp      Int @default(0)
+  attack  Int @default(0)
+  defense Int @default(0)
+  speed   Int @default(0)
 
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  userCards     UserCard[]
-  orders        Order[]
+  userCards UserCard[]
+  orders    Order[]
 
   @@index([rarity])
   @@index([type])
@@ -88,9 +89,9 @@ model Order {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  card          Card     @relation(fields: [cardId], references: [id])
-  userCard      UserCard?
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card     Card      @relation(fields: [cardId], references: [id])
+  userCard UserCard?
 
   @@map("orders")
 }
@@ -108,9 +109,9 @@ model UserCard {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  card         Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  order        Order?   @relation(fields: [orderId], references: [id])
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card  Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id])
 
   @@unique([userId, cardId])
   @@map("user_cards")

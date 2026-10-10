@@ -15,10 +15,6 @@ import { useAuthStore } from "../../store/authStore";
 import { useCollectionStore } from "../../store/collectionStore";
 import { cn } from "../../lib/utils";
 
-interface UserMetadata {
-  username?: string;
-}
-
 export function TopNavBar() {
   const { user, signOut } = useAuthStore();
   const { items } = useCollectionStore();
@@ -26,8 +22,7 @@ export function TopNavBar() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const metadata = user?.user_metadata as UserMetadata | undefined;
-  const username = metadata?.username ?? user?.email?.split("@")[0];
+  const username = user?.username ?? user?.email?.split("@")[0];
   const totalCards = user ? items.reduce((acc, e) => acc + e.quantity, 0) : 0;
 
   // Cierra al hacer click fuera

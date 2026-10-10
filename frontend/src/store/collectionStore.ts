@@ -20,7 +20,7 @@ export const useCollectionStore = create<CollectionState>((set, get) => ({
     set({ loading: true });
     try {
       // Usa el endpoint NestJS /api/collection (requiere Bearer token,
-      // que el interceptor de `api` adjunta automáticamente desde Supabase).
+      // que el interceptor de `api` adjunta automáticamente desde localStorage).
       const { data } = await api.get<UserCardEntry[]>('/collection');
       const items = Array.isArray(data) ? data : [];
       set({

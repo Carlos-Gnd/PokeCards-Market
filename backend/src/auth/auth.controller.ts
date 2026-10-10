@@ -2,12 +2,17 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Logger,
+  Get,
+  HttpCode,
   Post,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { UsersService } from '../users/users.service';
+import { AuthService } from './auth.service';
+import { CurrentUser, type SessionUser } from './current-user.decorator';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 class RegisterDto {
   @IsEmail()
@@ -22,73 +27,60 @@ class RegisterDto {
   username!: string;
 }
 
-/** Shape de error que devuelve la API admin de GoTrue (Supabase Auth). */
-interface GoTrueErrorBody {
-  msg?: string;
-  message?: string;
-  error_description?: string;
+class LoginDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  password!: string;
 }
 
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
   constructor(
-    private readonly config: ConfigService,
+    private readonly auth: AuthService,
     private readonly users: UsersService,
   ) {}
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
-    const url = this.config.get<string>('SUPABASE_URL');
-    const serviceKey = this.config.get<string>('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!url || !serviceKey) {
-      throw new BadRequestException('Servidor de auth no configurado');
+    const email = dto.email.trim().toLowerCase();
+    if (await this.users.findByEmail(email)) {
+      throw new BadRequestException('Ya existe una cuenta con ese correo');
     }
 
-    // Llama al admin API de GoTrue para crear usuario con email auto-confirmado
-    const adminUrl = `${url.replace(/\/$/, '')}/auth/v1/admin/users`;
-    const res = await fetch(adminUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({
-        email: dto.email,
-        password: dto.password,
-        email_confirm: true,
-        user_metadata: { username: dto.username },
-      }),
+    const user = await this.users.createWithPassword({
+      email,
+      username: dto.username.trim(),
+      passwordHash: await this.auth.hashPassword(dto.password),
     });
+    return this.session(user);
+  }
 
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as GoTrueErrorBody;
-      const msg =
-        body.msg ??
-        body.message ??
-        body.error_description ??
-        'No se pudo crear la cuenta';
-      this.logger.warn(`Registro falló para ${dto.email}: ${msg}`);
-      throw new BadRequestException(msg);
+  @Post('login')
+  @HttpCode(200)
+  async login(@Body() dto: LoginDto) {
+    const user = await this.users.findByEmail(dto.email.trim().toLowerCase());
+    // Mismo mensaje si el correo no existe o la contraseña falla (no revela cuentas)
+    const ok =
+      !!user?.passwordHash &&
+      (await this.auth.verifyPassword(dto.password, user.passwordHash));
+    if (!user || !ok) {
+      throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
+    return this.session(user);
+  }
 
-    const user = (await res.json()) as { id: string; email: string };
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: SessionUser) {
+    return { user };
+  }
 
-    // Crea perfil en public.users con el username deseado
-    await this.users.createProfile({
-      id: user.id,
-      email: user.email,
-      username: dto.username,
-    });
-
+  private session(user: { id: string; email: string; username: string }) {
     return {
-      success: true,
-      userId: user.id,
-      email: user.email,
-      message: 'Cuenta creada correctamente.',
+      token: this.auth.signToken(user),
+      user: { id: user.id, email: user.email, username: user.username },
     };
   }
 }

@@ -1,10 +1,19 @@
 import { create } from 'zustand';
-import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { api, clearToken, getToken, setToken } from '../lib/api';
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+}
+
+interface SessionResponse {
+  token: string;
+  user: User;
+}
 
 interface AuthState {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   init: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -12,45 +21,57 @@ interface AuthState {
   signOut: () => Promise<void>;
 }
 
+/** Convierte el error de axios en un Error con el mensaje del backend. */
+function toError(err: unknown, fallback: string): Error {
+  const msg = (err as { uiMessage?: string })?.uiMessage;
+  return new Error(msg || fallback);
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  session: null,
   loading: true,
 
   init: async () => {
-    const { data } = await supabase.auth.getSession();
-    set({ session: data.session, user: data.session?.user ?? null, loading: false });
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ session, user: session?.user ?? null });
-    });
+    if (!getToken()) {
+      set({ user: null, loading: false });
+      return;
+    }
+    try {
+      const { data } = await api.get<{ user: User }>('/auth/me');
+      set({ user: data.user, loading: false });
+    } catch {
+      // Token vencido o inválido → sesión cerrada
+      clearToken();
+      set({ user: null, loading: false });
+    }
   },
 
   signIn: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    set({ session: data.session, user: data.user });
+    try {
+      const { data } = await api.post<SessionResponse>('/auth/login', { email, password });
+      setToken(data.token);
+      set({ user: data.user });
+    } catch (err) {
+      throw toError(err, 'Credenciales incorrectas');
+    }
   },
 
   signUp: async (email, password, username) => {
-    // Crea la cuenta vía backend (auto-confirma email)
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    const res = await fetch(`${apiUrl}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, username }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || 'No se pudo crear la cuenta');
+    try {
+      const { data } = await api.post<SessionResponse>('/auth/register', {
+        email,
+        password,
+        username,
+      });
+      setToken(data.token);
+      set({ user: data.user });
+    } catch (err) {
+      throw toError(err, 'No se pudo crear la cuenta');
     }
-    // Inicia sesión inmediatamente (email ya está confirmado)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    set({ session: data.session, user: data.user });
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
-    set({ session: null, user: null });
+    clearToken();
+    set({ user: null });
   },
 }));
